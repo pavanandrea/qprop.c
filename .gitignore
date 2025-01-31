@@ -1,0 +1,7 @@
+isae2/
+dev/
+TODO.txt
+assets/
+!assets/logo.svg
+bin/*.zip
+webgui/

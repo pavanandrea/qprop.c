@@ -1,0 +1,22 @@
+!USAGE: .\qprop.exe cam6x3.def null 5.00 14020
+Graupner CAM 6x3 folder
+
+ 2     3.05  ! Nblades  [ R ]
+
+ 0.50  5.8   ! CL0     CL_a
+ -0.3  1.2   ! CLmin   CLmax
+
+ 0.028  0.050  0.020 0.5   !  CD0    CD2u   CD2l   CLCD0 
+ 70000   -0.7              !  REref  REexp
+
+ 0.0254  0.0254   1.0  !  Rfac   Cfac   Bfac  
+ 0.      0.       0.   !  Radd   Cadd   Badd  
+
+#  r    chord    beta
+ 0.75    0.66    27.5  ! root station
+ 1.00    0.69    22.0
+ 1.50    0.63    15.2
+ 2.00    0.55    10.2
+ 2.50    0.44     6.5
+ 2.875   0.30     4.6
+ 3.00    0.19     4.2  ! tip station, also gives R = r if R is omitted from Line 2
