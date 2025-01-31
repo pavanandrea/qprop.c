@@ -6,7 +6,7 @@
 </p>
 
 [⇩ Download](https://github.com/pavanandrea/qprop.c/releases/latest) &nbsp; / &nbsp;
-[📄 Validation](validation/README.md) <!--&nbsp; / &nbsp; Web Demo -->
+[📄 Validation](https://github.com/pavanandrea/qprop.c/tree/main/validation) <!--&nbsp; / &nbsp; Web Demo -->
 
 *qprop.c* is a simple, lightweight library for analyzing the aerodynamic
 performance of propellers.
@@ -21,11 +21,18 @@ QPROP utilizes vortex theory instead.
 This approach offers several numerical advantages, such as avoiding the
 infamous singularity at $\phi=0$, and provides more accurate results.
 
+<!--
 <img src="./validation/apc_10x7sf/results_performance_thrust.svg" width="45%" />
 <img src="./validation/apc_10x7sf/results_performance_efficiency.svg" width="45%" />
 
 <img src="./validation/apc_16x8e/results_static_thrust.svg" width="45%" />
 <img src="./validation/apc_16x8e/results_static_power.svg" width="45%" />
+-->
+
+![Thrust Diagram](./validation/apc_10x7sf/results_performance_thrust.svg) | ![Efficiency](./validation/apc_10x7sf/results_performance_efficiency.svg)
+:------------------------------------------------------------------------:|:------------------------------------------------------------------------:
+![Static Thrust](./validation/apc_16x8e/results_static_thrust.svg)        | ![Static Power](./validation/apc_16x8e/results_static_power.svg)
+
 
 This project was created with the goal of building a minimal tool to quickly
 estimate thrust and torque of drone propellers and that could be easily

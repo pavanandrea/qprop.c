@@ -19,18 +19,18 @@ hovering conditions and the full operating range.
 All tests were run on an x86-64 PC with Ubuntu 24.04.1 LTS and Julia 1.11.2.
 The C compiler used to build the shared libraries was zig-linux-x86_64-0.14.0-dev.2851+b074fb7dd.
 
-<img src="./apc_10x7sf/results_static_thrust.svg" width="45%" />
-<img src="./apc_10x7sf/results_static_power.svg" width="45%" />
+![Static Thrust](./apc_10x7sf/results_static_thrust.svg) | ![Static Power](./apc_10x7sf/results_static_power.svg) | ![]()
+:-------------------------------------------------------:|:------------------------------------------------------:|:------
+![Thrust](./apc_10x7sf/results_performance_thrust.svg) | ![Power](./apc_10x7sf/results_performance_power.svg) | ![Efficiency](./apc_10x7sf/results_performance_efficiency.svg)
 
 <!--
- Thrust                                                | Power                                                | Efficiency
-:-----------------------------------------------------:|:----------------------------------------------------:|:-----------------------------------:
-![Thrust](./apc_10x7sf/results_performance_thrust.svg) | ![Power](./apc_10x7sf/results_performance_power.svg) | ![Efficiency](./apc_10x7sf/results_performance_efficiency.svg)
--->
+<img src="./apc_10x7sf/results_static_thrust.svg" width="45%" />
+<img src="./apc_10x7sf/results_static_power.svg" width="45%" />
 
 <img src="./apc_10x7sf/results_performance_thrust.svg" width="30%" />
 <img src="./apc_10x7sf/results_performance_power.svg" width="30%" />
 <img src="./apc_10x7sf/results_performance_efficiency.svg" width="30%" />
+-->
 
 The results shows very good accuracy in all scenarios, especially considering
 that qprop.c is a cheap low-fidelity code.
@@ -54,16 +54,18 @@ The C compiler used to build the shared libraries was zig-linux-x86_64-0.14.0-de
 These validation scripts also serve as examples of how to use qprop.c without
 detailed airfoil polars, reproducing the analytic polar model used in QPROP.
 
-<!--
+
 ![Thrust distribution](./graupner_6x3/results_hovering_thrust.svg) | ![Torque distribution](./graupner_6x3/results_hovering_torque.svg)
 :-----------------------------------------------------------------:|:-----------------------------------------------------------------:
 ![Thrust distribution](./graupner_6x3/results_Uinf=5_thrust.png)   | ![Torque distribution](./graupner_6x3/results_Uinf=5_torque.png)
--->
+
+<!--
 <img src="./graupner_6x3/results_hovering_thrust.svg" width="45%" />
 <img src="./graupner_6x3/results_hovering_torque.svg" width="45%" />
 
 <img src="./graupner_6x3/results_Uinf=5_thrust.png" width="45%" />
 <img src="./graupner_6x3/results_Uinf=5_torque.png" width="45%" />
+-->
 
 The results show general consistency with the original QPROP v1.22,
 but some small yet non-negligible differences were observed.
@@ -81,12 +83,18 @@ This test case is similar to the previous APC 10x7SF, sharing the same setup.
 However, the APC 16x8E rotor is larger and features slender blades,
 a configuration that comfortably falls within the code's assumptions.
 
+<!--
 <img src="./apc_16x8e/results_static_thrust.svg" width="45%" />
 <img src="./apc_16x8e/results_static_power.svg" width="45%" />
 
 <img src="./apc_16x8e/results_performance_thrust.svg" width="30%" />
 <img src="./apc_16x8e/results_performance_power.svg" width="30%" />
 <img src="./apc_16x8e/results_performance_efficiency.svg" width="30%" />
+-->
+
+![Static Thrust](./apc_16x8e/results_static_thrust.svg) | ![Static Power](./apc_16x8e/results_static_power.svg) | ![]()
+:-------------------------------------------------------:|:------------------------------------------------------:|:------
+![Thrust](./apc_16x8e/results_performance_thrust.svg) | ![Power](./apc_16x8e/results_performance_power.svg) | ![Efficiency](./apc_16x8e/results_performance_efficiency.svg)
 
 As expected, qprop.c shows good agreement with the experimental results.
 
@@ -102,16 +110,20 @@ the boundaries of its theoretical validity.
 This small rotor features non-slender blades and operates at high RPMs,
 resulting in significant 3D effects that challenge the code's assumptions.
 
+<!--
 <img src="./apc_4.2x4/results_static_thrust.png" width="45%" />
 <img src="./apc_4.2x4/results_static_power.png" width="45%" />
-
-While some discrepancies were expected, the results from qprop.c deviated
-excessively from the wind tunnel data in hovering conditions.
 
 <img src="./apc_4.2x4/results_performance_thrust.png" width="30%" />
 <img src="./apc_4.2x4/results_performance_power.png" width="30%" />
 <img src="./apc_4.2x4/results_performance_efficiency.png" width="30%" />
+-->
+![Static Thrust](./apc_4.2x4/results_static_thrust.png) | ![Static Power](./apc_4.2x4/results_static_power.png) | ![]()
+:-------------------------------------------------------:|:------------------------------------------------------:|:------
+![Thrust](./apc_4.2x4/results_performance_thrust.png) | ![Power](./apc_4.2x4/results_performance_power.png) | ![Efficiency](./apc_4.2x4/results_performance_efficiency.png)
 
+While some discrepancies were expected, the results from qprop.c deviated
+excessively from the wind tunnel data in hovering conditions.
 The performance of qprop.c was further evaluated in the entire operating diagram.
 
 In freestream conditions, the discrepancies between qprop.c and wind tunnel data
