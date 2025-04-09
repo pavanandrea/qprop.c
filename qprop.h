@@ -48,7 +48,7 @@ typedef struct {
     double beta;        //twist angle (rad)
     double r;           //radial distance (m)
     double dr;          //width length (m)
-    Airfoil airfoil;    //pointer to local airfoil data
+    Airfoil airfoil;    //local airfoil data
 } Element;
 
 //data structure for rotors
@@ -89,15 +89,13 @@ typedef struct {
 //  - deg (double): angle in degrees
 //Output:
 //  - (double): angle in radians
-//Example:
-//  double myangle = deg2rad(+45.0);
 double deg2rad(double deg);
 
 //READ_XFOIL_POLAR_FROM_FILE reads an airfoil polar from a text file
 //Input:
 //  - filename (array of char): name of the txt file containing the polar data
 //Output:
-//  - (Polar): data structure containing the polar data
+//  - (Polar*): pointer to the polar data
 //Notes:
 //  - The file is assumed to be in the XFoil/XFLR5 format:
 //      - Reynolds number on a line containing "Re =", ignoring spaces
@@ -109,30 +107,28 @@ double deg2rad(double deg);
 //    alpha, CL and CD using malloc and realloc.
 //    It is the caller's responsibility to free this memory by calling
 //    unload_polar_from_memory(Polar*) when it is no longer needed
-//Example:
-//  Polar mypolar = read_xfoil_polar_from_file("naca4412_Re0.030_M0.00_N6.0.txt");
-Polar read_xfoil_polar_from_file(const char *filename);
+Polar* read_xfoil_polar_from_file(const char *filename);
 
-//UNLOAD_POLAR_FROM_MEMORY frees the memory allocated in a Polar structure
+//FREE_POLAR frees the memory allocated in a Polar structure
 //Input:
 //  - currentpolar (Polar*): pointer to a polar that is no longer needed
 //Output:
 //  - none
-void unload_polar_from_memory(Polar *currentpolar);
+void free_polar(Polar *currentpolar);
 
-//UNLOAD_AIRFOIL_FROM_MEMORY frees the memory allocated in an Airfoil structure
+//FREE_AIRFOIL frees the memory allocated in an Airfoil structure
 //Input:
 //  - currentairfoil (Airfoil*): pointer to an airfoil that is no longer needed
 //Output:
 //  - none
-void unload_airfoil_from_memory(Airfoil *currentairfoil);
+void free_airfoil(Airfoil *currentairfoil);
 
 //IMPORT_XFOIL_POLARS imports airfoil polars from multiple text files
 //Input:
 //  - filenames (array of (array of char)): list of files containing polar data
 //  - number_of_files (int): number of files in the array
 //Output:
-//  - (Airfoil): data structure containing the imported airfoil polars
+//  - (Airfoil*): pointer to the imported airfoil polars
 //Notes:
 //  - All files are assumed to be in the XFoil/XFLR5 format
 //    (see the notes above "read_xfoil_polar_from_file")
@@ -142,13 +138,7 @@ void unload_airfoil_from_memory(Airfoil *currentairfoil);
 //    and for each Polar using malloc and realloc.
 //    It is the caller's responsibility to free this memory when it is no longer
 //    needed, by calling unload_airfoil_from_memory(Airfoil*)
-//Example:
-//  const char *filenames[] = {
-//      "naca4412_Re0.030_M0.00_N6.0.txt",
-//      "naca4412_Re0.060_M0.00_N6.0.txt"
-//  };
-//  Airfoil myairfoil = import_xfoil_polars(filenames, 2);
-Airfoil import_xfoil_polars(const char *filenames[], int number_of_files);
+Airfoil* import_xfoil_polars(const char *filenames[], int number_of_files);
 
 //ANALYTIC_POLAR_CURVES generates polars using the simple analytic model
 //described by Drela in the QPROP user guide
@@ -164,35 +154,27 @@ Airfoil import_xfoil_polars(const char *filenames[], int number_of_files);
 //  - REref (double): reference Reynolds number for all the coefficients above
 //  - REexp (double): Reynolds number exponent (suggested: -0.5)
 //Output:
-//  - (Airfoil): generated polar curves
-//Example:
-//  Airfoil myairfoil = analytic_polar_curves(
-//      0.50, 5.8, -0.3, 1.2,   0.028, 0.050, 0.020, 0.5,   70000, -0.7
-//  );
-Airfoil analytic_polar_curves(double CL0, double CL_a, double CLmin, double CLmax,
-                              double CD0, double CD2u, double CD2l, double CLCD0,
-                              double REref, double REexp);
+//  - (Airfoil*): pointer to generated polar curves
+Airfoil* analytic_polar_curves(double CL0, double CL_a, double CLmin, double CLmax,
+                               double CD0, double CD2u, double CD2l, double CLCD0,
+                               double REref, double REexp);
 
 //IMPORT_ROTOR_GEOMETRY_APC reads a propeller geometry from an APC PE0 file
 //Input:
 //  - filename (array of char): name of the PE0 file containing the geom data
 //  - airfoil (Airfoil*): pointer to an airfoil
 //Output:
-//  - (Rotor): imported rotor geometry with the given airfoil
+//  - (Rotor*): pointer to imported rotor geometry with the given airfoil
 //Notes:
 //  - the file is assumed to be downloaded from the official APC website
-//Example:
-//  const char *filenames[] = {"naca4412_Re0.100_M0.00_N6.0.txt"};
-//  Airfoil myairfoil = import_xfoil_polars(filenames, 1);
-//  Rotor myrotor = import_rotor_geometry_apc("10x7SF-PERF.PE0", &naca4412);
-Rotor import_rotor_geometry_apc(const char *filename, Airfoil *airfoil);
+Rotor* import_rotor_geometry_apc(const char *filename, Airfoil *airfoil);
 
-//UNLOAD_ROTOR_FROM_MEMORY frees the memory allocated in a Rotor structure
+//FREE_ROTOR frees the memory allocated in a Rotor structure
 //Input:
 //  - currentrotor (Rotor*): pointer to a rotor that is no longer needed
 //Output:
 //  - none
-void unload_rotor_from_memory(Rotor *currentrotor);
+void free_rotor(Rotor *currentrotor);
 
 //QPROP runs the QProp algorithm as described by Drela for each blade element
 //Input:
@@ -205,15 +187,15 @@ void unload_rotor_from_memory(Rotor *currentrotor);
 //  - mu (double): air dynamic viscosity in Pa-s (suggested value: 1.81e-5)
 //  - a (double): speed of sound in m/s (suggested value: 340.0) - set to 0 to disable Mach correction
 //Output:
-//  - (RotorPerformance): data structure containing the QProp outputs
+//  - (RotorPerformance*): pointer to the QProp outputs
 //Notes:
 //  - the current implementation assumes that there is no externally-induced
 //    tangential velocity (Ut = 0)
-RotorPerformance qprop(Rotor *rotor, double Uinf, double Omega, double tol, int itmax, double rho, double mu, double a);
+RotorPerformance* qprop(Rotor *rotor, double Uinf, double Omega, double tol, int itmax, double rho, double mu, double a);
 
-//UNLOAD_ROTOR_PERFORMANCE_FROM_MEMORY frees the memory allocated in a qprop output
+//FREE_ROTOR_PERFORMANCE frees the memory allocated in a qprop output
 //Input:
 //  - perf (RotorPerformance*): pointer to a qprop output that is no longer needed
 //Output:
 //  - none
-void unload_rotor_performance_from_memory(RotorPerformance *perf);
+void free_rotor_performance(RotorPerformance *perf);

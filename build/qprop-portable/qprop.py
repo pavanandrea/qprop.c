@@ -187,7 +187,7 @@ def deg2rad(deg):
 
 
 lib.read_xfoil_polar_from_file.argtypes = [ctypes.c_char_p]
-lib.read_xfoil_polar_from_file.restype = Polar
+lib.read_xfoil_polar_from_file.restype = ctypes.POINTER(Polar)
 def read_xfoil_polar_from_file(filename):
     """
     READ_XFOIL_POLAR_FROM_FILE reads an airfoil polar from a text file
@@ -209,37 +209,37 @@ def read_xfoil_polar_from_file(filename):
     Example:
         mypolar = read_xfoil_polar_from_file("naca4412_Re0.030_M0.00_N6.0.txt")
     """
-    return lib.read_xfoil_polar_from_file(filename.encode())
+    return lib.read_xfoil_polar_from_file(filename.encode()).contents
 
 
-lib.unload_polar_from_memory.argtypes = [ctypes.POINTER(Polar)]
-lib.unload_polar_from_memory.restype = None
-def unload_polar_from_memory(currentpolar):
+lib.free_polar.argtypes = [ctypes.POINTER(Polar)]
+lib.free_polar.restype = None
+def free_polar(currentpolar):
     """
-    UNLOAD_POLAR_FROM_MEMORY frees the memory allocated in a Polar structure
+    FREE_POLAR frees the memory allocated in a Polar structure
     Input:
         - currentpolar (Polar): object that is no longer needed
     Output:
         - none
     """
-    lib.unload_polar_from_memory(ctypes.byref(currentpolar))
+    lib.free_polar(ctypes.byref(currentpolar))
 
 
-lib.unload_airfoil_from_memory.argtypes = [ctypes.POINTER(Airfoil)]
-lib.unload_airfoil_from_memory.restype = None
-def unload_airfoil_from_memory(currentairfoil):
+lib.free_airfoil.argtypes = [ctypes.POINTER(Airfoil)]
+lib.free_airfoil.restype = None
+def free_airfoil(currentairfoil):
     """
-    UNLOAD_AIRFOIL_FROM_MEMORY frees the memory allocated in an Airfoil structure
+    FREE_AIRFOIL frees the memory allocated in an Airfoil structure
     Input:
         - currentairfoil (Airfoil): object that is no longer needed
     Output:
         - none
     """
-    lib.unload_airfoil_from_memory(ctypes.byref(currentairfoil))
+    lib.free_airfoil(ctypes.byref(currentairfoil))
 
 
 lib.import_xfoil_polars.argtypes = [ctypes.POINTER(ctypes.c_char_p), ctypes.c_int]
-lib.import_xfoil_polars.restype = Airfoil
+lib.import_xfoil_polars.restype = ctypes.POINTER(Airfoil)
 def import_xfoil_polars(filenames):
     """
     IMPORT_XFOIL_POLARS imports airfoil polars from multiple text files
@@ -261,13 +261,13 @@ def import_xfoil_polars(filenames):
         myairfoil = import_xfoil_polars(filenames)
     """
     filenames_array = (ctypes.c_char_p * len(filenames)) (*[filename.encode() for filename in filenames])
-    return lib.import_xfoil_polars(filenames_array, len(filenames))
+    return lib.import_xfoil_polars(filenames_array, len(filenames)).contents
 
 
 lib.analytic_polar_curves.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double,
                                     ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double,
                                     ctypes.c_double, ctypes.c_double]
-lib.analytic_polar_curves.restype = Airfoil
+lib.analytic_polar_curves.restype = ctypes.POINTER(Airfoil)
 def analytic_polar_curves(CL0, CL_a, CLmin, CLmax, CD0, CD2u, CD2l, CLCD0, REref, REexp):
     """
     ANALYTIC_POLAR_CURVES generates polars using the simple analytic model
@@ -288,11 +288,11 @@ def analytic_polar_curves(CL0, CL_a, CLmin, CLmax, CD0, CD2u, CD2l, CLCD0, REref
     Example:
         myairfoil = analytic_polar_curves(0.50, 5.8, -0.3, 1.2, 0.028, 0.050, 0.020, 0.5, 70000, -0.7)
     """
-    return lib.analytic_polar_curves(CL0, CL_a, CLmin, CLmax, CD0, CD2u, CD2l, CLCD0, REref, REexp)
+    return lib.analytic_polar_curves(CL0, CL_a, CLmin, CLmax, CD0, CD2u, CD2l, CLCD0, REref, REexp).contents
 
 
 lib.import_rotor_geometry_apc.argtypes = [ctypes.c_char_p, ctypes.POINTER(Airfoil)]
-lib.import_rotor_geometry_apc.restype = Rotor
+lib.import_rotor_geometry_apc.restype = ctypes.POINTER(Rotor)
 def import_rotor_geometry_apc(filename, airfoil):
     """
     IMPORT_ROTOR_GEOMETRY_APC reads a propeller geometry from an APC PE0 file
@@ -308,24 +308,24 @@ def import_rotor_geometry_apc(filename, airfoil):
         myairfoil = import_xfoil_polars(filenames)
         myrotor = import_rotor_geometry_apc("10x7SF-PERF.PE0", myairfoil)
     """
-    return lib.import_rotor_geometry_apc(filename.encode(), ctypes.byref(airfoil))
+    return lib.import_rotor_geometry_apc(filename.encode(), ctypes.byref(airfoil)).contents
 
 
-lib.unload_rotor_from_memory.argtypes = [ctypes.POINTER(Rotor)]
-lib.unload_rotor_from_memory.restype = None
-def unload_rotor_from_memory(currentrotor):
+lib.free_rotor.argtypes = [ctypes.POINTER(Rotor)]
+lib.free_rotor.restype = None
+def free_rotor(currentrotor):
     """
-    UNLOAD_ROTOR_FROM_MEMORY frees the memory allocated in a Rotor structure
+    FREE_ROTOR frees the memory allocated in a Rotor structure
     Input:
         - currentrotor (Rotor): object that is no longer needed
     Output:
         - none
     """
-    lib.unload_rotor_from_memory(ctypes.byref(currentrotor))
+    lib.free_rotor(ctypes.byref(currentrotor))
 
 
 lib.qprop.argtypes = [ctypes.POINTER(Rotor), ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_double, ctypes.c_double, ctypes.c_double]
-lib.qprop.restype = RotorPerformance
+lib.qprop.restype = ctypes.POINTER(RotorPerformance)
 def qprop(rotor, Uinf, Omega, tol=1e-6, itmax=100, rho=1.225, mu=1.81e-5, a=0.0):
     """
     QPROP runs the QProp algorithm as described by Drela for each blade element
@@ -344,18 +344,18 @@ def qprop(rotor, Uinf, Omega, tol=1e-6, itmax=100, rho=1.225, mu=1.81e-5, a=0.0)
         - the current implementation assumes that there is no externally-induced
           tangential velocity (Ut = 0)
     """
-    return lib.qprop(ctypes.byref(rotor), Uinf, Omega, tol, itmax, rho, mu, a)
+    return lib.qprop(ctypes.byref(rotor), Uinf, Omega, tol, itmax, rho, mu, a).contents
 
 
-lib.unload_rotor_performance_from_memory.argtypes = [ctypes.POINTER(RotorPerformance)]
-lib.unload_rotor_performance_from_memory.restype = None
-def unload_rotor_performance_from_memory(perf):
+lib.free_rotor_performance.argtypes = [ctypes.POINTER(RotorPerformance)]
+lib.free_rotor_performance.restype = None
+def free_rotor_performance(perf):
     """
-    UNLOAD_ROTOR_PERFORMANCE_FROM_MEMORY frees the memory allocated in a qprop output
+    FREE_ROTOR_PERFORMANCE frees the memory allocated in a qprop output
     Input:
         - perf (RotorPerformance): qprop output object that is no longer needed
     Output:
         - none
     """
-    lib.unload_rotor_performance_from_memory(ctypes.byref(perf))
+    lib.free_rotor_performance(ctypes.byref(perf))
 

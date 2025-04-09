@@ -9,7 +9,7 @@
 #-------------------------------------------------------------------------------
 import os
 import sys
-sys.path.insert(0, "../bin/qprop/")
+sys.path.insert(0, "../build/qprop-portable/")
 import qprop
 
 def main():
@@ -31,7 +31,7 @@ def main():
         print("TEST 2 - PASSED :)")
     else:
         print("TEST 2 - FAILED :(")
-        qprop.unload_polar_from_memory(polar2)
+        qprop.free_polar(polar2)
         return
 
     #test 3 - import airfoil from files
@@ -45,8 +45,8 @@ def main():
         print("TEST 3 - PASSED :)")
     else:
         print("TEST 3 - FAILED :(")
-        qprop.unload_polar_from_memory(polar2)
-        qprop.unload_airfoil_from_memory(naca4412)
+        qprop.free_polar(polar2)
+        qprop.free_airfoil(naca4412)
         return
 
     #test 4 - analyze APC propeller at J=0.05
@@ -63,17 +63,17 @@ def main():
         print("TEST 4 - PASSED :)")
     else:
         print("TEST 4 - FAILED :(")
-        qprop.unload_polar_from_memory(polar2)
-        qprop.unload_airfoil_from_memory(naca4412)
-        qprop.unload_rotor_from_memory(apc10x7sf)
-        qprop.unload_rotor_performance_from_memory(result4)
+        qprop.free_polar(polar2)
+        qprop.free_airfoil(naca4412)
+        qprop.free_rotor(apc10x7sf)
+        qprop.free_rotor_performance(result4)
         return
 
     #completed
-    qprop.unload_polar_from_memory(polar2)
-    qprop.unload_airfoil_from_memory(naca4412)
-    qprop.unload_rotor_from_memory(apc10x7sf)
-    qprop.unload_rotor_performance_from_memory(result4)
+    qprop.free_polar(polar2)
+    qprop.free_airfoil(naca4412)
+    qprop.free_rotor(apc10x7sf)
+    qprop.free_rotor_performance(result4)
 
 if __name__ == "__main__":
     main()

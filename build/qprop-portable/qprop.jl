@@ -150,18 +150,18 @@ end
 
 
 """
-UNLOAD_POLAR_FROM_MEMORY frees the memory allocated in a CPolar structure
+FREE_POLAR frees the memory allocated in a CPolar structure
 Input:
-    - currentpolar (CPolar): data structure that is no longer needed
+    - currentpolar (Ptr{CPolar}): data structure that is no longer needed
 Output:
     - none
 """
-function unload_polar_from_memory(currentpolar::CPolar)
+function free_polar(currentpolar::Ptr{CPolar})
     ccall(
-        (:unload_polar_from_memory, lib_filename),      #C function
-        Cvoid,                                          #return type
-        (Ptr{CPolar},),                                 #parameters types
-        Ref(currentpolar)                               #parameters
+        (:free_polar, lib_filename),    #C function
+        Cvoid,                          #return type
+        (Ptr{CPolar},),                 #parameters types
+        currentpolar                    #parameters
     );
     return;
 end
@@ -201,33 +201,39 @@ Example:
 """
 function read_xfoil_polar_from_file(filename::String)
     #get polar in C format
-    cpolar = ccall(
+    cpolar_ptr = ccall(
         (:read_xfoil_polar_from_file, lib_filename),    #C function
-        CPolar,                                         #return type
+        Ptr{CPolar},                                    #return type
         (Ptr{UInt8},),                                  #parameters types
         filename                                        #parameters
     );
+
+    #convert to Julia format
+    if cpolar_ptr == C_NULL
+        error("ERROR in read_xfoil_polar_from_file(): failed to read polar from file");
+    end
+    cpolar = unsafe_load(cpolar_ptr);
     newpolar = cpolar2polar(cpolar);
 
     #unload polar in C format from memory
-    unload_polar_from_memory(cpolar);
+    free_polar(cpolar_ptr);
     return newpolar;
 end
 
 
 """
-UNLOAD_AIRFOIL_FROM_MEMORY frees the memory allocated in an CAirfoil structure
+FREE_AIRFOIL frees the memory allocated in an CAirfoil structure
 Input:
     - currentairfoil (CAirfoil): data structure that is no longer needed
 Output:
     - none
 """
-function unload_airfoil_from_memory(currentairfoil::CAirfoil)
+function free_airfoil(currentairfoil::Ptr{CAirfoil})
     ccall(
-        (:unload_airfoil_from_memory, lib_filename),    #C function
-        Cvoid,                                          #return type
-        (Ptr{CAirfoil},),                                #parameters types
-        Ref(currentairfoil)                             #parameters
+        (:free_airfoil, lib_filename),      #C function
+        Cvoid,                              #return type
+        (Ptr{CAirfoil},),                   #parameters types
+        currentairfoil                      #parameters
     );
     return;
 end
@@ -285,18 +291,22 @@ Example:
 """
 function import_xfoil_polars(filenames::Vector{String})
     #get airfoil in C format
-    cairfoil = ccall(
+    cairfoil_ptr = ccall(
         (:import_xfoil_polars, lib_filename),           #C function
-        CAirfoil,                                       #return type
+        Ptr{CAirfoil},                                  #return type
         (Ptr{Ptr{UInt8}}, Int32),                       #parameters types
         filenames, length(filenames)                    #parameters
     );
 
     #convert to Julia format
+    if cairfoil_ptr == C_NULL
+        error("ERROR in import_xfoil_polars(): failed to read airfoil polars");
+    end
+    cairfoil = unsafe_load(cairfoil_ptr);
     newairfoil = cairfoil2airfoil(cairfoil);
 
     #unload airfoil in C format from memory
-    unload_airfoil_from_memory(cairfoil);
+    free_airfoil(cairfoil_ptr);
     return newairfoil;
 end
 
@@ -326,35 +336,36 @@ function analytic_polar_curves(CL0::Float64, CL_a::Float64, CLmin::Float64, CLma
                                CD0::Float64, CD2u::Float64, CD2l::Float64, CLCD0::Float64,
                                REref::Float64, REexp::Float64=-0.5)
     #get airfoil in C format
-    cairfoil = ccall(
+    cairfoil_ptr = ccall(
         (:analytic_polar_curves, lib_filename),         #C function
-        CAirfoil,                                       #return type
+        Ptr{CAirfoil},                                  #return type
         (Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64),     #parameters types
         CL0, CL_a, CLmin, CLmax, CD0, CD2u, CD2l, CLCD0, REref, REexp                                   #parameters
     );
 
     #convert to Julia format
+    cairfoil = unsafe_load(cairfoil_ptr);
     newairfoil = cairfoil2airfoil(cairfoil);
 
     #unload airfoil in C format from memory
-    unload_airfoil_from_memory(cairfoil);
+    free_airfoil(cairfoil_ptr);
     return newairfoil;
 end
 
 
 """
-UNLOAD_ROTOR_FROM_MEMORY frees the memory allocated in a CRotor structure
+FREE_ROTOR frees the memory allocated in a CRotor structure
 Input:
     - currentrotor (CRotor): data structure that is no longer needed
 Output:
     - none
 """
-function unload_rotor_from_memory(currentrotor::CRotor)
+function free_rotor(currentrotor::Ptr{CRotor})
     ccall(
-        (:unload_rotor_from_memory, lib_filename),      #C function
-        Cvoid,                                          #return type
-        (Ptr{CRotor},),                                  #parameters types
-        Ref(currentrotor)                               #parameters
+        (:free_rotor, lib_filename),        #C function
+        Cvoid,                              #return type
+        (Ptr{CRotor},),                     #parameters types
+        currentrotor                        #parameters
     );
     return;
 end
@@ -379,12 +390,16 @@ function import_rotor_geometry_apc(filename::String, airfoil::Airfoil)
     cairfoil = airfoil2cairfoil(airfoil);
 
     #get rotor in C format
-    crotor = ccall(
+    crotor_ptr = ccall(
         (:import_rotor_geometry_apc, lib_filename),     #C function
-        CRotor,                                         #return type
+        Ptr{CRotor},                                    #return type
         (Ptr{UInt8}, Ptr{CAirfoil}),                    #parameters types
         filename, Ref(cairfoil)                         #parameters
     );
+    if crotor_ptr == C_NULL
+        error("ERROR in import_rotor_geometry_apc(): failed to read geometry from file");
+    end
+    crotor = unsafe_load(crotor_ptr);
 
     #convert to Julia format
     newrotor = Rotor(crotor.D, crotor.B, crotor.nelems, Vector{Element}(undef, crotor.nelems));
@@ -403,24 +418,24 @@ function import_rotor_geometry_apc(filename::String, airfoil::Airfoil)
     end
 
     #clean memory
-    unload_rotor_from_memory(crotor);
+    free_rotor(crotor_ptr);
     return newrotor;
 end
 
 
 """
-UNLOAD_ROTOR_PERFORMANCE_FROM_MEMORY frees the memory allocated in a qprop output
+FREE_ROTOR_PERFORMANCE frees the memory allocated in a qprop output
 Input:
-    - perf (CRotorPerformance): qprop output that is no longer needed
+    - perf (Ptr{CRotorPerformance}): qprop output that is no longer needed
 Output:
     - none
 """
-function unload_rotor_performance_from_memory(perf::CRotorPerformance)
+function free_rotor_performance(perf::Ptr{CRotorPerformance})
     ccall(
-        (:unload_rotor_performance_from_memory, lib_filename),  #C function
-        Cvoid,                                                  #return type
-        (Ptr{CRotorPerformance},),                               #parameters types
-        Ref(perf)                                               #parameters
+        (:free_rotor_performance, lib_filename),    #C function
+        Cvoid,                                      #return type
+        (Ptr{CRotorPerformance},),                  #parameters types
+        perf                                        #parameters
     );
     return;
 end
@@ -458,12 +473,16 @@ function qprop(rotor::Rotor, Uinf::Float64, Omega::Float64, tol::Float64=1e-6, i
     crotor = CRotor(rotor.D, rotor.B, rotor.nelems, pointer(celements));
 
     #get output in C format
-    cperf = ccall(
+    cperf_ptr = ccall(
         (:qprop, lib_filename),                                                     #C function
-        CRotorPerformance,                                                          #return type
+        Ptr{CRotorPerformance},                                                     #return type
         (Ptr{CRotor}, Float64, Float64, Float64, Int, Float64, Float64, Float64),   #parameters types
         Ref(crotor), Uinf, Omega, tol, itmax, rho, mu, a                            #parameters
     );
+    if cperf_ptr == C_NULL
+        error("ERROR in qprop(): failed to run qprop iterations");
+    end
+    cperf = unsafe_load(cperf_ptr);
 
     #convert to Julia format
     residuals = [unsafe_load(cperf.residuals_ptr, i) for i=1:rotor.nelems];
@@ -477,7 +496,7 @@ function qprop(rotor::Rotor, Uinf::Float64, Omega::Float64, tol::Float64=1e-6, i
     perf = RotorPerformance(cperf.T, cperf.Q, cperf.CT, cperf.CP, cperf.J, residuals, Gamma, lambdaw, r, W, phi, dTdr, dQdr, cperf.nelems);
 
     #clean memory
-    unload_rotor_performance_from_memory(cperf);
+    free_rotor_performance(cperf_ptr);
     return perf;
 end
 

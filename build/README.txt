@@ -11,6 +11,3 @@ If successful, the output should display the following results:
     Thrust: 3.22175 N
     Torque: 0.02969 N-m"
 
-Remember that the software is released under the MIT license.
-A copy of the license is available at "qprop/LICENSE".
-Copyright (c) 2025 Andrea Pavan

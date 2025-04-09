@@ -1,7 +1,7 @@
-isae2/
+build/*.zip
 dev/
-TODO.txt
-assets/*
-!assets/logo.svg
-bin/*.zip
+docs/*
+!docs/logo.svg
+isae2/
 webgui/
+TODO.txt
