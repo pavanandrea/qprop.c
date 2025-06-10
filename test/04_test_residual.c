@@ -26,66 +26,62 @@ int main() {
         "./airfoil_polar_naca4412_Ncrit=6/NACA 4412_T1_Re0.300_M0.00_N6.0.txt",
         "./airfoil_polar_naca4412_Ncrit=6/NACA 4412_T1_Re0.500_M0.00_N6.0.txt"
     };
-    Airfoil naca4412 = import_xfoil_polars(filenames1, 10);
+    Airfoil* naca4412 = import_xfoil_polars(filenames1, 10);
 
     //load propeller geometry from APC file
-    Rotor apc10x7sf = import_rotor_geometry_apc("../validation/apc_10x7sf/10x7SF-PERF.PE0", &naca4412);
+    Rotor* apc10x7sf = import_rotor_geometry_apc("../validation/apc_10x7sf/10x7SF-PERF.PE0", naca4412);
     double Uinf = 0.01;
     double Omega = 6014*M_PI/30;
 
 
     //test #1: blade geometry
-    if (apc10x7sf.nelems == 42
-            && apc10x7sf.D == 0.254
-            && fabs(apc10x7sf.elements[apc10x7sf.nelems-1].beta - deg2rad(12.6102)) <= 1e-6) {
-        printf("TEST 1 - PASSED :)\n");
+    //printf("%i\n", apc10x7sf->nsections);
+    //printf("%f\n", apc10x7sf->D);
+    //printf("%f\n", apc10x7sf->sections[apc10x7sf->nsections-1].beta);
+    if (apc10x7sf->nsections == 43
+            && apc10x7sf->D == 0.254
+            && fabs(apc10x7sf->sections[apc10x7sf->nsections-1].beta - deg2rad(12.5775)) <= 1e-6) {
+        printf("TEST 4.1 - PASSED :)\n");
     }
     else {
-        printf("TEST 1 - FAILED :(\n");
-        unload_rotor_from_memory(&apc10x7sf);
-        unload_airfoil_from_memory(&naca4412);
+        printf("TEST 4.1 - FAILED :(\n");
+        free_rotor(apc10x7sf);
+        free_airfoil(naca4412);
         return 0;
     }
 
 
     //test #2: residual function at the blade tip at psi=45°
-    Residual residual2 = residual(
-        deg2rad(+45.0),                                     //psi angle (rad)
-        Uinf,
-        Omega * apc10x7sf.elements[apc10x7sf.nelems-1].r,   //Ut=Omega*r (m/s)
-        0.5 * apc10x7sf.D,
-        apc10x7sf.B,
-        &apc10x7sf.elements[apc10x7sf.nelems-1],
-        1.225,
-        1.81e-5,
-        0.0
-    );
-    //ALTERNATIVE: use hand-written blade element
-    /*Element tipelement = {
+    Element tipelement = {
         0.00226187,             //chord c (m)
         0.22008950933498891,    //pitch angle β (rad)
         0.12657709,             //radial position r (m)
         0.00084582,             //width dr (m)
-        naca4412                //airfoil polars
+        *naca4412               //airfoil polars
     };
-    Residual residual2 = residual(
-        deg2rad(+45.0),
+    Residual residual2 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    residual(
+        &residual2,
+        deg2rad(+45.0),             //psi angle (rad)
         Uinf,
-        Omega * tipelement.r,
-        5*0.0254,
-        2,
+        Omega * tipelement.r,       //Ut=Omega*r (m/s)
+        0.5 * apc10x7sf->D,
+        apc10x7sf->B,
         &tipelement,
         1.225,
         1.81e-5,
         0.0
-    );*/
+    );
+    //printf("%f\n", residual2.residual);
+    //printf("%f\n", residual2.W);
+    //printf("%f\n", residual2.phi);
     if (fabs(residual2.residual) - 0.8024823651874253 <= 1e-6) {
-        printf("TEST 2 - PASSED :)\n");
+        printf("TEST 4.2 - PASSED :)\n");
     }
     else {
-        printf("TEST 2 - FAILED :(\n");
-        unload_rotor_from_memory(&apc10x7sf);
-        unload_airfoil_from_memory(&naca4412);
+        printf("TEST 4.2 - FAILED :(\n");
+        free_rotor(apc10x7sf);
+        free_airfoil(naca4412);
         return 0;
     }
     //Julia output:
@@ -96,7 +92,7 @@ int main() {
     //      W = 73.65017452473688,
     //      Γ = 0.7753023257108531
 
-    unload_rotor_from_memory(&apc10x7sf);
-    unload_airfoil_from_memory(&naca4412);
+    free_rotor(apc10x7sf);
+    free_airfoil(naca4412);
     return 0;
 }

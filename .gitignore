@@ -1,4 +1,5 @@
 build/*.zip
+build/qprop-portable/__pycache__
 dev/
 docs/*
 !docs/logo.svg

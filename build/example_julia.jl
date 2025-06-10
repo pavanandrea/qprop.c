@@ -43,48 +43,44 @@ function main()
     #for example, you can download a PE0 file from the APC website, then use the following function:
     #myrotor = QProp.import_rotor_geometry_apc("path/to/apc_geometry.PE0", myairfoil);
 
+    #OR, if you want to import a propeller geometry from the UIUC database:
+    #myrotor = QProp.import_rotor_geometry_uiuc("path/to/propeller_geometry.txt", myairfoil, propeller_diameter, number_of_blades)
+    #                                                                                        ⬑e.g: 0.2           ⬑e.g: 2
 
     #ALTERNATIVE APPROACH: define the propeller geometry manually
-    #to do this, you need to specify the radius, chord and sweep angle of the propeller at various points along its span
+    #to do this, you need to specify the radius, chord and sweep angle of the propeller at various sections along its span
 
     #the radius values should be in meters and should be specified in ascending order from the hub to the tip
-    r = [0.0202, 0.0225, 0.0248, 0.0271, 0.0293, 0.0316, 0.0339, 0.0362, 0.0385, 0.0408, 0.0431, 0.0453, 0.0476, 0.0499, 0.0522, 0.0545, 0.0568, 0.0591, 0.0613, 0.0636, 0.0659, 0.0682, 0.0705, 0.0728, 0.0751];
-    #note that the radius values will be used as the center points of each panel
+    r = [0.75, 1.00, 1.50, 2.00, 2.50, 2.875, 3.00] * 0.0254;
+    #    ⬑hub                                ⬑tip    ⬑convert inches to meters
     
     #the chord length values should also be in meters and should correspond to the radius values
-    c = [0.0170, 0.0173, 0.0175, 0.0175, 0.0173, 0.0171, 0.0167, 0.0163, 0.0159, 0.0156, 0.0152, 0.0149, 0.0145, 0.0141, 0.0137, 0.0132, 0.0127, 0.0122, 0.0117, 0.0111, 0.0106, 0.0100, 0.0091, 0.0078, 0.0060];
+    c = [0.66, 0.69, 0.63, 0.55, 0.44, 0.30, 0.19] * 0.0254;
+    #    ⬑hub                                ⬑tip   ⬑convert inches to meters
     
     #the sweep angle values should be in radians and should correspond to the radius values
-    β = deg2rad.([26.38, 24.311, 22.471, 20.856, 19.442, 18.191, 17.065, 16.026, 15.037, 14.071, 13.130, 12.219, 11.344, 10.511, 9.7260, 8.9880, 8.2960, 7.6470, 7.0390, 6.4690, 5.9370, 5.4490, 5.0140, 4.6380, 4.3290]);
+    β = deg2rad.([27.5, 22.0, 15.2, 10.2, 6.5, 4.6, 4.2]);
     
-    #determine the number of panels discretizing each blade
-    nelems = size(r, 1);
+    #extract the number of sections, to make subsequent calculations more convenient
+    nsections = size(r, 1);
     
-    #now that the radius values at the center of each panel have been defined, the size (width) of each panel must be specified
-    #this is done by calculating the difference in radius between adjacent panels
-    dr = similar(r);
-    dr[1] = r[2] - r[1];
-    dr[2:end-1] = 0.5*(r[3:end] - r[1:end-2]);
-    dr[end] = r[end] - r[end-1];
-
     #calculate the propeller diameter (in meters)
-    D = 2*(r[end] + 0.5*dr[end]);       #should be equal to 6 inches = 0.1524 m
+    D = 2*r[end];       #should be equal to 6 inches = 0.1524 m
 
-    #set the number of blades
+    #specify the number of blades
     B = 2;
 
     #finally, define the rotor elements and create the rotor object with the specified properties
-    elements = Vector{QProp.Element}(undef, nelems);
-    for i=1:nelems
-        elements[i] = QProp.Element(
+    sections = Vector{QProp.Section}(undef, nsections);
+    for i=1:nsections
+        sections[i] = QProp.Section(
             c[i],           #Element.c (m)
             β[i],           #Element.β (rad)
             r[i],           #Element.r (m)
-            dr[i],          #Element.dr (m)
             myairfoil       #Element.airfoil
         )
     end
-    myrotor = QProp.Rotor(D, B, nelems, elements);
+    myrotor = QProp.Rotor(D, B, nsections, sections);
 
 
     #----------------------------------------------------------
@@ -96,7 +92,7 @@ function main()
 
     #specify rotor speed in rad/s
     #remember to multiply by pi/30 to convert from rpm to rad/s
-    Ω = 14020*pi/30;
+    Ω = 14020 * pi/30;
 
     #run qprop.c
     results = QProp.qprop(myrotor, Uinf, Ω);
@@ -110,8 +106,8 @@ function main()
     println("  Torque: ", round(results.Q, digits=5), " N-m");
     #the expected output of the analysis is:
     #qprop.c results:
-    #   Thrust: 3.22175 N
-    #   Torque: 0.02969 N-m
+    #   Thrust: 3.26103 N
+    #   Torque: 0.03005 N-m
 end
 
 main();

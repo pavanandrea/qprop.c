@@ -9,9 +9,10 @@
 #   License: MIT
 #-------------------------------------------------------------------------------
 module QProp
-export Polar, Airfoil, Element, Rotor, RotorPerformance,
+export Polar, Airfoil, Section, Rotor, RotorPerformance,
        deg2rad, read_xfoil_polar_from_file, import_xfoil_polars,
-       analytic_polar_curves, import_rotor_geometry_apc, qprop;
+       analytic_polar_curves, import_rotor_geometry_apc,
+       import_rotor_geometry_uiuc, refine_rotor_sections, qprop;
 
 #import precompiled shared library for the current operating system
 lib_filename = "";
@@ -60,19 +61,17 @@ struct Airfoil
     size::Int
 end
 
-#data structure for blade elements
-struct CElement
+#data structure for blade sections
+struct CSection
     c::Cdouble
     beta::Cdouble
     r::Cdouble
-    dr::Cdouble
     airfoil::CAirfoil
 end
-struct Element
+struct Section
     c::Float64
     beta::Float64
     r::Float64
-    dr::Float64
     airfoil::Airfoil
 end
 
@@ -80,14 +79,14 @@ end
 struct CRotor
     D::Cdouble
     B::Cint
-    nelems::Cint
-    elements_ptr::Ptr{CElement}
+    nsections::Cint
+    sections_ptr::Ptr{CSection}
 end
 struct Rotor
     D::Float64
     B::Int
-    nelems::Int
-    elements::Vector{Element}
+    nsections::Int
+    sections::Vector{Section}
 end
 
 #data structure for qprop output
@@ -377,7 +376,7 @@ Input:
     - filename: name of the PE0 file containing the geom data
     - airfoil (Airfoil): data structure containing the airfoil data
 Output:
-    - (CRotor): imported rotor geometry with the given airfoil
+    - (Rotor): imported rotor geometry with the given airfoil
 Notes:
     - the file is assumed to be downloaded from the official APC website
 Example:
@@ -402,23 +401,135 @@ function import_rotor_geometry_apc(filename::String, airfoil::Airfoil)
     crotor = unsafe_load(crotor_ptr);
 
     #convert to Julia format
-    newrotor = Rotor(crotor.D, crotor.B, crotor.nelems, Vector{Element}(undef, crotor.nelems));
-    for i=1:crotor.nelems
-        #extract i-th element in C format
-        celemi = unsafe_load(crotor.elements_ptr, i);
+    newrotor = Rotor(crotor.D, crotor.B, crotor.nsections, Vector{Section}(undef, crotor.nsections));
+    for i=1:crotor.nsections
+        #extract i-th section in C format
+        csecti = unsafe_load(crotor.sections_ptr, i);
 
-        #convert i-th element to Julia format
-        newrotor.elements[i] = Element(
-            celemi.c,
-            celemi.beta,
-            celemi.r,
-            celemi.dr,
-            cairfoil2airfoil(celemi.airfoil)
+        #convert i-th section to Julia format
+        newrotor.sections[i] = Section(
+            csecti.c,
+            csecti.beta,
+            csecti.r,
+            cairfoil2airfoil(csecti.airfoil)
         );
     end
 
     #clean memory
     free_rotor(crotor_ptr);
+    return newrotor;
+end
+
+
+"""
+IMPORT_ROTOR_GEOMETRY_UIUC reads a propeller geometry from an UIUC txt file
+Input:
+    - filename: name of the txt file containing the geom data
+    - airfoil (Airfoil): data structure containing the airfoil data
+    - D: rotor diameter (m)
+    - B: number of blades
+Output:
+    - (Rotor): imported rotor geometry with the given properties
+Notes:
+    - the file is assumed to be downloaded from the UIUC website
+Example:
+    airfoil_filenames = ["naca4412_Re0.100_M0.00_N6.0.txt"];
+    myairfoil = import_xfoil_polars(airfoil_filenames);
+    myrotor = import_rotor_geometry_uiuc("apcsf_10x7_geom.txt", myairfoil, 10*0.0254, 2);
+"""
+function import_rotor_geometry_uiuc(filename::String, airfoil::Airfoil, D::Float64, B::Int)
+    #convert airfoil to C format
+    cairfoil = airfoil2cairfoil(airfoil);
+
+    #get rotor in C format
+    crotor_ptr = ccall(
+        (:import_rotor_geometry_uiuc, lib_filename),    #C function
+        Ptr{CRotor},                                    #return type
+        (Ptr{UInt8}, Ptr{CAirfoil}, Float64, Int),      #parameters types
+        filename, Ref(cairfoil), D, B                   #parameters
+    );
+    if crotor_ptr == C_NULL
+        error("ERROR in import_rotor_geometry_uiuc(): failed to read geometry from file");
+    end
+    crotor = unsafe_load(crotor_ptr);
+
+    #convert to Julia format
+    newrotor = Rotor(crotor.D, crotor.B, crotor.nsections, Vector{Section}(undef, crotor.nsections));
+    for i=1:crotor.nsections
+        #extract i-th section in C format
+        csecti = unsafe_load(crotor.sections_ptr, i);
+
+        #convert i-th section to Julia format
+        newrotor.sections[i] = Section(
+            csecti.c,
+            csecti.beta,
+            csecti.r,
+            cairfoil2airfoil(csecti.airfoil)
+        );
+    end
+
+    #clean memory
+    free_rotor(crotor_ptr);
+    return newrotor;
+end
+
+
+"""
+REFINE_ROTOR_SECTIONS creates a propeller geometry with the specified number
+of equally-spaced sections
+Input:
+    - oldrotor (Rotor): reference rotor geometry
+    - nsections: desired number of equally-spaced sections
+Output:
+    - (Rotor): refined rotor geometry
+Example:
+    airfoil_filenames = ["naca4412_Re0.100_M0.00_N6.0.txt"];
+    myairfoil = import_xfoil_polars(airfoil_filenames);
+    reference_rotor = import_rotor_geometry_uiuc("apcsf_10x7_geom.txt", myairfoil, 10*0.0254, 2);
+    myrotor = refine_rotor_sections(reference_rotor, 100);
+"""
+function refine_rotor_sections(oldrotor::Rotor, nsections::Int)
+    #convert rotor in C format
+    coldsections = Vector{CSection}(undef, oldrotor.nsections);
+    for i=1:oldrotor.nsections
+        coldsections[i] = CSection(
+            oldrotor.sections[i].c,
+            oldrotor.sections[i].beta,
+            oldrotor.sections[i].r,
+            airfoil2cairfoil(oldrotor.sections[i].airfoil)
+        );
+    end
+    coldrotor = CRotor(oldrotor.D, oldrotor.B, oldrotor.nsections, pointer(coldsections));
+
+    #get output in C format
+    cnewrotor_ptr = ccall(
+        (:refine_rotor_sections, lib_filename),             #C function
+        Ptr{CRotor},                                        #return type
+        (Ptr{CRotor}, Int),                                 #parameters types
+        Ref(coldrotor), nsections                           #parameters
+    );
+    if cnewrotor_ptr == C_NULL
+        error("ERROR in refine_rotor_sections(): failed to discretize geometry");
+    end
+    cnewrotor = unsafe_load(cnewrotor_ptr);
+
+    #convert to Julia format
+    newrotor = Rotor(cnewrotor.D, cnewrotor.B, cnewrotor.nsections, Vector{Section}(undef, cnewrotor.nsections));
+    for i=1:cnewrotor.nsections
+        #extract i-th section in C format
+        csecti = unsafe_load(cnewrotor.sections_ptr, i);
+
+        #convert i-th section to Julia format
+        newrotor.sections[i] = Section(
+            csecti.c,
+            csecti.beta,
+            csecti.r,
+            cairfoil2airfoil(csecti.airfoil)
+        );
+    end
+    
+    #clean memory
+    free_rotor(cnewrotor_ptr);
     return newrotor;
 end
 
@@ -460,17 +571,16 @@ Notes:
 """
 function qprop(rotor::Rotor, Uinf::Float64, Omega::Float64, tol::Float64=1e-6, itmax::Int=100, rho::Float64=1.225, mu::Float64=1.81e-5, a::Float64=0.0)
     #convert rotor in C format
-    celements = Vector{CElement}(undef, rotor.nelems);
-    for i=1:rotor.nelems
-        celements[i] = CElement(
-            rotor.elements[i].c,
-            rotor.elements[i].beta,
-            rotor.elements[i].r,
-            rotor.elements[i].dr,
-            airfoil2cairfoil(rotor.elements[i].airfoil)
+    csections = Vector{CSection}(undef, rotor.nsections);
+    for i=1:rotor.nsections
+        csections[i] = CSection(
+            rotor.sections[i].c,
+            rotor.sections[i].beta,
+            rotor.sections[i].r,
+            airfoil2cairfoil(rotor.sections[i].airfoil)
         );
     end
-    crotor = CRotor(rotor.D, rotor.B, rotor.nelems, pointer(celements));
+    crotor = CRotor(rotor.D, rotor.B, rotor.nsections, pointer(csections));
 
     #get output in C format
     cperf_ptr = ccall(
@@ -485,14 +595,14 @@ function qprop(rotor::Rotor, Uinf::Float64, Omega::Float64, tol::Float64=1e-6, i
     cperf = unsafe_load(cperf_ptr);
 
     #convert to Julia format
-    residuals = [unsafe_load(cperf.residuals_ptr, i) for i=1:rotor.nelems];
-    Gamma = [unsafe_load(cperf.Gamma_ptr, i) for i=1:rotor.nelems];
-    lambdaw = [unsafe_load(cperf.lambdaw_ptr, i) for i=1:rotor.nelems];
-    r = [unsafe_load(cperf.r_ptr, i) for i=1:rotor.nelems];
-    W = [unsafe_load(cperf.W_ptr, i) for i=1:rotor.nelems];
-    phi = [unsafe_load(cperf.phi_ptr, i) for i=1:rotor.nelems];
-    dTdr = [unsafe_load(cperf.dTdr_ptr, i) for i=1:rotor.nelems];
-    dQdr = [unsafe_load(cperf.dQdr_ptr, i) for i=1:rotor.nelems];
+    residuals = [unsafe_load(cperf.residuals_ptr, i) for i=1:cperf.nelems];
+    Gamma = [unsafe_load(cperf.Gamma_ptr, i) for i=1:cperf.nelems];
+    lambdaw = [unsafe_load(cperf.lambdaw_ptr, i) for i=1:cperf.nelems];
+    r = [unsafe_load(cperf.r_ptr, i) for i=1:cperf.nelems];
+    W = [unsafe_load(cperf.W_ptr, i) for i=1:cperf.nelems];
+    phi = [unsafe_load(cperf.phi_ptr, i) for i=1:cperf.nelems];
+    dTdr = [unsafe_load(cperf.dTdr_ptr, i) for i=1:cperf.nelems];
+    dQdr = [unsafe_load(cperf.dQdr_ptr, i) for i=1:cperf.nelems];
     perf = RotorPerformance(cperf.T, cperf.Q, cperf.CT, cperf.CP, cperf.J, residuals, Gamma, lambdaw, r, W, phi, dTdr, dQdr, cperf.nelems);
 
     #clean memory

@@ -42,21 +42,20 @@ typedef struct {
     int size;           //number of polars in the airfoil
 } Airfoil;
 
-//data structure for blade elements
+//data structure for blade sections
 typedef struct {
     double c;           //chord length (m)
     double beta;        //twist angle (rad)
     double r;           //radial distance (m)
-    double dr;          //width length (m)
     Airfoil airfoil;    //local airfoil data
-} Element;
+} Section;
 
 //data structure for rotors
 typedef struct {
     double D;           //rotor diameter (m)
     int B;              //number of blades
-    int nelems;         //number of elements discretizing a blade
-    Element *elements;  //array of elements discretizing a blade
+    int nsections;      //number of sections discretizing a blade
+    Section* sections;  //array of sections discretizing a blade
 } Rotor;
 
 //data structure for qprop output
@@ -66,14 +65,14 @@ typedef struct {
     double CT;          //thrust coefficient
     double CP;          //power coefficient
     double J;           //advance ratio
-    double *residuals;  //array of elements residuals
-    double *Gamma;      //array of elements circulations
-    double *lambdaw;    //array of local wake advance ratios
-    double *r;          //array of elements radial distance (m)
-    double *W;          //array of local velocities (m/s)
-    double *phi;        //array of local inflow angle (rad)
-    double *dTdr;       //array for blade thrust distribution (N/m)
-    double *dQdr;       //array for blade torque distribution (N-m/m)
+    double* residuals;  //array of elements residuals
+    double* Gamma;      //array of elements circulations
+    double* lambdaw;    //array of local wake advance ratios
+    double* r;          //array of elements radial distance (m)
+    double* W;          //array of local velocities (m/s)
+    double* phi;        //array of local inflow angle (rad)
+    double* dTdr;       //array for blade thrust distribution (N/m)
+    double* dQdr;       //array for blade torque distribution (N-m/m)
     int nelems;         //number of elements discretizing a blade
 } RotorPerformance;
 
@@ -114,14 +113,14 @@ Polar* read_xfoil_polar_from_file(const char *filename);
 //  - currentpolar (Polar*): pointer to a polar that is no longer needed
 //Output:
 //  - none
-void free_polar(Polar *currentpolar);
+void free_polar(Polar* currentpolar);
 
 //FREE_AIRFOIL frees the memory allocated in an Airfoil structure
 //Input:
 //  - currentairfoil (Airfoil*): pointer to an airfoil that is no longer needed
 //Output:
 //  - none
-void free_airfoil(Airfoil *currentairfoil);
+void free_airfoil(Airfoil* currentairfoil);
 
 //IMPORT_XFOIL_POLARS imports airfoil polars from multiple text files
 //Input:
@@ -169,12 +168,33 @@ Airfoil* analytic_polar_curves(double CL0, double CL_a, double CLmin, double CLm
 //  - the file is assumed to be downloaded from the official APC website
 Rotor* import_rotor_geometry_apc(const char *filename, Airfoil *airfoil);
 
+//IMPORT_ROTOR_GEOMETRY_UIUC reads a propeller geometry from an UIUC txt file
+//Input:
+//  - filename (array of char): name of the txt file containing the geom data
+//  - airfoil (Airfoil*): pointer to an airfoil
+//  - D (double): rotor diameter in m
+//  - B (int): number of blades
+//Output:
+//  - (Rotor*): pointer to imported rotor geometry with the given properties
+//Notes:
+//  - the file is assumed to be downloaded from the official APC website
+Rotor* import_rotor_geometry_uiuc(const char *filename, Airfoil* airfoil, double D, int B);
+
+//REFINE_ROTOR_SECTIONS creates a propeller geometry with the specified number
+//of equally-spaced sections
+//Input:
+//  - oldrotor (Rotor*): pointer to the reference rotor geometry
+//  - nsections (int): desired number of sections
+//Output:
+//  - newrotor (Rotor*): pointer to the new rotor geometry
+Rotor* refine_rotor_sections(Rotor* oldrotor, int nsections);
+
 //FREE_ROTOR frees the memory allocated in a Rotor structure
 //Input:
 //  - currentrotor (Rotor*): pointer to a rotor that is no longer needed
 //Output:
 //  - none
-void free_rotor(Rotor *currentrotor);
+void free_rotor(Rotor* currentrotor);
 
 //QPROP runs the QProp algorithm as described by Drela for each blade element
 //Input:
@@ -191,11 +211,11 @@ void free_rotor(Rotor *currentrotor);
 //Notes:
 //  - the current implementation assumes that there is no externally-induced
 //    tangential velocity (Ut = 0)
-RotorPerformance* qprop(Rotor *rotor, double Uinf, double Omega, double tol, int itmax, double rho, double mu, double a);
+RotorPerformance* qprop(Rotor* rotor, double Uinf, double Omega, double tol, int itmax, double rho, double mu, double a);
 
 //FREE_ROTOR_PERFORMANCE frees the memory allocated in a qprop output
 //Input:
 //  - perf (RotorPerformance*): pointer to a qprop output that is no longer needed
 //Output:
 //  - none
-void free_rotor_performance(RotorPerformance *perf);
+void free_rotor_performance(RotorPerformance* perf);

@@ -51,12 +51,11 @@ class Airfoil(ctypes.Structure):
     ]
 
 # data structure for blade elements
-class Element(ctypes.Structure):
+class Section(ctypes.Structure):
     _fields_ = [
         ("c", ctypes.c_double),
         ("beta", ctypes.c_double),
         ("r", ctypes.c_double),
-        ("dr", ctypes.c_double),
         ("airfoil", Airfoil)
     ]
 
@@ -65,8 +64,8 @@ class Rotor(ctypes.Structure):
     _fields_ = [
         ("D", ctypes.c_double),
         ("B", ctypes.c_int),
-        ("nelems", ctypes.c_int),
-        ("elements", ctypes.POINTER(Element))
+        ("nsections", ctypes.c_int),
+        ("sections", ctypes.POINTER(Section))
     ]
 
 # data structure for qprop output
@@ -131,43 +130,41 @@ def create_airfoil(polars, size):
     return newairfoil
 
 
-def create_element(c, beta, r, dr, airfoil):
+def create_section(c, beta, r, airfoil):
     """
-    CREATE_ELEMENT creates an Element object from Python lists
+    CREATE_SECTION creates a Section object from Python lists
     Input:
         - c: chord length (m)
         - beta: twist angle (rad)
         - r: radial distance (m)
-        - dr: width length (m)
         - airfoil (Airfoil): local airfoil data
     Output:
         - (Element): data structure containing the element data
     """
-    newelement = Element()
-    newelement.c = c
-    newelement.beta = beta
-    newelement.r = r
-    newelement.dr = dr
-    newelement.airfoil = airfoil
-    return newelement
+    newsection = Section()
+    newsection.c = c
+    newsection.beta = beta
+    newsection.r = r
+    newsection.airfoil = airfoil
+    return newsection
 
 
-def create_rotor(D, B, nelems, elements):
+def create_rotor(D, B, nsections, sections):
     """
     CREATE_ROTOR creates a Rotor object from Python lists
     Input:
         - D: rotor diameter (m)
         - B: number of blades
-        - nelems: number of elements discretizing a blade
-        - elements: array of elements discretizing a blade
+        - nsections: number of sections discretizing a blade
+        - sections: array of sections discretizing a blade
     Output:
         - (Rotor): qprop-compatible data structure containing the desired rotor geometry
     """
     newrotor = Rotor()
     newrotor.D = D
     newrotor.B = B
-    newrotor.nelems = nelems
-    newrotor.elements = (Element * nelems)(*elements)
+    newrotor.nsections = nsections
+    newrotor.sections = (Section * nsections)(*sections)
     return newrotor
 
 
@@ -304,11 +301,53 @@ def import_rotor_geometry_apc(filename, airfoil):
     Notes:
         - the file is assumed to be downloaded from the official APC website
     Example:
-        filenames = ["naca4412_Re0.100_M0.00_N6.0.txt"]
-        myairfoil = import_xfoil_polars(filenames)
+        airfoil_filenames = ["naca4412_Re0.100_M0.00_N6.0.txt"]
+        myairfoil = import_xfoil_polars(airfoil_filenames)
         myrotor = import_rotor_geometry_apc("10x7SF-PERF.PE0", myairfoil)
     """
     return lib.import_rotor_geometry_apc(filename.encode(), ctypes.byref(airfoil)).contents
+
+
+lib.import_rotor_geometry_uiuc.argtypes = [ctypes.c_char_p, ctypes.POINTER(Airfoil), ctypes.c_double, ctypes.c_int]
+lib.import_rotor_geometry_uiuc.restype = ctypes.POINTER(Rotor)
+def import_rotor_geometry_uiuc(filename, airfoil, D, B):
+    """
+    IMPORT_ROTOR_GEOMETRY_UIUC reads a propeller geometry from an UIUC txt file
+    Input:
+        - filename (String): name of the txt file containing the geom data
+        - airfoil (Airfoil): pointer to an airfoil
+        - D: rotor diameter (m)
+        - B: number of blades
+    Output:
+        - (Rotor): imported rotor geometry with the given properties
+    Notes:
+        - the file is assumed to be downloaded from the UIUC website
+    Example:
+        airfoil_filenames = ["naca4412_Re0.100_M0.00_N6.0.txt"]
+        myairfoil = import_xfoil_polars(airfoil_filenames)
+        myrotor = import_rotor_geometry_uiuc("apcsf_10x7_geom.txt", myairfoil, 10*0.0254, 2)
+    """
+    return lib.import_rotor_geometry_uiuc(filename.encode(), ctypes.byref(airfoil), D, B).contents
+
+
+lib.refine_rotor_sections.argtypes = [ctypes.POINTER(Rotor), ctypes.c_int]
+lib.refine_rotor_sections.restype = ctypes.POINTER(Rotor)
+def refine_rotor_sections(oldrotor, nsections):
+    """
+    REFINE_ROTOR_SECTIONS creates a propeller geometry with the specified number
+    of equally-spaced sections
+    Input:
+        - oldrotor (Rotor): reference rotor geometry
+        - nsections: desired number of equally-spaced sections
+    Output:
+        - (Rotor): refined rotor geometry
+    Example:
+        airfoil_filenames = ["naca4412_Re0.100_M0.00_N6.0.txt"]
+        myairfoil = import_xfoil_polars(airfoil_filenames)
+        reference_rotor = import_rotor_geometry_uiuc("apcsf_10x7_geom.txt", myairfoil, 10*0.0254, 2)
+        myrotor = refine_rotor_sections(reference_rotor, 100)
+    """
+    return lib.refine_rotor_sections(ctypes.byref(oldrotor), nsections).contents
 
 
 lib.free_rotor.argtypes = [ctypes.POINTER(Rotor)]

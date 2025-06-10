@@ -262,7 +262,7 @@ typedef struct {
 
 //interpolate airfoil coefficient across a polar
 //INTERNAL USE ONLY
-PolarPoint* interpolate_polar(Polar *currentpolar, double alpha) {
+PolarPoint* interpolate_polar(Polar* currentpolar, double alpha) {
     PolarPoint* query = malloc(sizeof(PolarPoint));
     if (!query) {
         printf("ERROR: memory allocation error in interpolate_polar()\n");
@@ -330,7 +330,7 @@ PolarPoint* interpolate_polar(Polar *currentpolar, double alpha) {
 
 //interpolate airfoil polars
 //INTERNAL USE ONLY
-PolarPoint* interpolate_airfoil_polars(Airfoil *currentairfoil, double alpha, double Re, double Mach) {
+PolarPoint* interpolate_airfoil_polars(Airfoil* currentairfoil, double alpha, double Re, double Mach) {
     //find the two polars that bracket the query point
     PolarPoint* query = malloc(sizeof(PolarPoint));
     if (!query) {
@@ -394,7 +394,7 @@ PolarPoint* interpolate_airfoil_polars(Airfoil *currentairfoil, double alpha, do
 }
 
 //read propeller geometry from APC PE0 file
-Rotor* import_rotor_geometry_apc(const char *filename, Airfoil *airfoil) {
+Rotor* import_rotor_geometry_apc(const char *filename, Airfoil* airfoil) {
     Rotor* newrotor = malloc(sizeof(Rotor));
     if (!newrotor) {
         printf("ERROR: memory allocation error in import_rotor_geometry_apc()\n");
@@ -402,8 +402,8 @@ Rotor* import_rotor_geometry_apc(const char *filename, Airfoil *airfoil) {
     }
     newrotor->D = 0.0;
     newrotor->B = 0;
-    newrotor->nelems = 0;
-    newrotor->elements = NULL;
+    newrotor->nsections = 0;
+    newrotor->sections = NULL;
 
     FILE* fileio = fopen(filename, "rb");
     if (!fileio) {
@@ -415,9 +415,6 @@ Rotor* import_rotor_geometry_apc(const char *filename, Airfoil *airfoil) {
     //read file line by line
     char line[MAX_LINE_LENGTH];
     int parse_line = false;
-    double rprev = 0.0;
-    double cprev = 0.0;
-    double betaprev = 0.0;
     while (fgets(line, MAX_LINE_LENGTH, fileio)) {
         //check if line contains unique keywords like "STATION" and "MAX-THICK"
         //to start parsing from the next line
@@ -477,34 +474,26 @@ Rotor* import_rotor_geometry_apc(const char *filename, Airfoil *airfoil) {
 
         //parse line
         if (parse_line && token_counter == 13) {
-            //extract new values at the current section
-            double r = rprev;
-            double c = cprev;
-            double beta = betaprev;
+            //extract values at the current section
+            double r = 0.0;
+            double c = 0.0;
+            double beta = 0.0;
             if (sscanf(line, "%lf %lf %*f %*f %*f %*f %*f %lf %*f %*f %*f %*f %*f", &r, &c, &beta) == 3) {
                 //convert units to SI
                 r = r * 0.0254;
                 c = c * 0.0254;
                 beta = deg2rad(beta);
 
-                //create new element averaging the new values with the previous ones
-                if (rprev != 0.0) {
-                    Element newelement; //= {0, 0, 0, 0, (*airfoil)};
-                    newelement.r = 0.5*(r + rprev);
-                    newelement.c = 0.5*(c + cprev);
-                    newelement.beta = 0.5*(beta + betaprev);
-                    newelement.dr = r - rprev;
-                    newelement.airfoil = (*airfoil);
-                    newrotor->elements = (Element*) realloc(newrotor->elements, (newrotor->nelems+1)*sizeof(Element));
-                    newrotor->D = 2*r;
-                    newrotor->nelems += 1;
-                    newrotor->elements[newrotor->nelems-1] = newelement;
-                }
-
-                //update previous values for the next line
-                rprev = r;
-                cprev = c;
-                betaprev = beta;
+                //create new section
+                Section newsection; //= {0, 0, 0, (*airfoil)};
+                newsection.r = r;
+                newsection.c = c;
+                newsection.beta = beta;
+                newsection.airfoil = (*airfoil);
+                newrotor->sections = (Section*) realloc(newrotor->sections, (newrotor->nsections+1)*sizeof(Section));
+                newrotor->D = 2*r;
+                newrotor->nsections += 1;
+                newrotor->sections[newrotor->nsections-1] = newsection;
             }
         }
 
@@ -518,20 +507,193 @@ Rotor* import_rotor_geometry_apc(const char *filename, Airfoil *airfoil) {
         }
     }
     fclose(fileio);
-    if (newrotor->nelems == 0 || newrotor->D == 0 || newrotor->B == 0) {
+    if (newrotor->nsections == 0 || newrotor->D == 0 || newrotor->B == 0) {
         printf("ERROR unable to parse rotor from %s\n", filename);
-        free(newrotor->elements);
+        free(newrotor->sections);
         free(newrotor);
         return NULL;
     }
     return newrotor;
 }
 
+//read propeller geometry from UIUC TXT file
+Rotor* import_rotor_geometry_uiuc(const char *filename, Airfoil* airfoil, double D, int B) {
+    Rotor* newrotor = malloc(sizeof(Rotor));
+    if (!newrotor) {
+        printf("ERROR: memory allocation error in import_rotor_geometry_uiuc()\n");
+        return NULL;
+    }
+    newrotor->D = D;
+    newrotor->B = B;
+    newrotor->nsections = 0;
+    newrotor->sections = NULL;
+
+    FILE* fileio = fopen(filename, "rb");
+    if (!fileio) {
+        printf("ERROR opening file %s\n", filename);
+        free(newrotor);
+        return NULL;
+    }
+
+    //read file line by line
+    char line[MAX_LINE_LENGTH];
+    int parse_line = false;
+    while (fgets(line, MAX_LINE_LENGTH, fileio)) {
+        //check if line contains unique keywords like "r/R", "c/R" and "beta"
+        //to start parsing from the next line
+        if (!parse_line && strstr(line, "r/R") && strstr(line, "c/R") && strstr(line, "beta")) {
+            //printf("Enable parse line\n");
+            parse_line = true;
+        }
+
+        //count number of items in the line
+        int token_counter = 0;
+        if (parse_line) {
+            bool in_value = false;      //keep track if current char is a value
+            if (!isblank(line[0]) && isgraph(line[0])) {
+                //printf("Starting line in value\n");
+                in_value = true;
+                token_counter += 1;
+            }
+            for (int i=1; i<MAX_LINE_LENGTH; ++i) {
+                if (line[i] == '\0' || line[i] == '\n') {
+                    break;
+                }
+                
+                if (!isblank(line[i]) && isgraph(line[i])) {
+                    if (!in_value) {
+                        token_counter += 1;
+                        //printf("New token starting from: %c (position: %i)\n", line[i],i);
+                        in_value = true;
+                    }
+                }
+                else {
+                    if (in_value) {
+                        in_value = false;
+                    }
+                }
+            }
+            //printf("Number of tokens: %i\n", token_counter);
+        }
+
+        //parse line
+        if (parse_line && token_counter == 3) {
+            //extract values at the current section
+            double r = 0.0;
+            double c = 0.0;
+            double beta = 0.0;
+            if (sscanf(line, "%lf %lf %lf", &r, &c, &beta) == 3) {
+                //convert units to SI
+                r = r * (D/2);
+                c = c * (D/2);
+                beta = deg2rad(beta);
+
+                //create new section
+                Section newsection; //= {0, 0, 0, (*airfoil)};
+                newsection.r = r;
+                newsection.c = c;
+                newsection.beta = beta;
+                newsection.airfoil = (*airfoil);
+                newrotor->sections = (Section*) realloc(newrotor->sections, (newrotor->nsections+1)*sizeof(Section));
+                newrotor->nsections += 1;
+                newrotor->sections[newrotor->nsections-1] = newsection;
+            }
+        }
+    }
+    fclose(fileio);
+    if (newrotor->nsections == 0 || newrotor->D == 0 || newrotor->B == 0) {
+        printf("ERROR unable to parse rotor from %s\n", filename);
+        free(newrotor->sections);
+        free(newrotor);
+        return NULL;
+    }
+    return newrotor;
+}
+
+//change number of sections in a propeller geometry
+Rotor* refine_rotor_sections(Rotor* oldrotor, int nsections) {
+    //initialize variables
+    Rotor* newrotor = malloc(sizeof(Rotor));
+    if (!newrotor) {
+        printf("ERROR: memory allocation error in refine_rotor_sections()\n");
+        return NULL;
+    }
+    newrotor->D = oldrotor->D;
+    newrotor->B = oldrotor->B;
+    newrotor->nsections = nsections;
+    newrotor->sections = (Section*) malloc(nsections*sizeof(Section));
+    if (!newrotor->sections) {
+        printf("ERROR: memory allocation error in refine_rotor_sections()\n");
+        return NULL;
+    }
+
+    //linearly interpolate sections
+    double dr = (oldrotor->sections[oldrotor->nsections-1].r - oldrotor->sections[0].r) / (nsections-1);
+    for (int i=0; i<nsections; ++i) {
+        //find nearest old sections
+        int lower_section_idx = 0;
+        int upper_section_idx = oldrotor->nsections-1;
+        double rnew = oldrotor->sections[0].r + i*dr;
+        if (rnew <= oldrotor->sections[0].r) {
+            //use the hub section
+            upper_section_idx = 0;
+        }
+        else if (rnew >= oldrotor->sections[oldrotor->nsections-1].r) {
+            //use the tip section
+            lower_section_idx = oldrotor->nsections-1;
+        }
+        else {
+            //use two intermediate sections
+            for (int j=0; j<oldrotor->nsections-1; ++j) {
+                if (oldrotor->sections[j].r < rnew && rnew <= oldrotor->sections[j+1].r) {
+                    lower_section_idx = j;
+                    upper_section_idx = j+1;
+                    break;
+                }
+            }
+        }
+
+        //create new section
+        Section newsection; //= {0, 0, 0, (*airfoil)};
+        newsection.r = rnew;
+        newsection.c = interp1(
+            oldrotor->sections[lower_section_idx].r,
+            oldrotor->sections[lower_section_idx].c,
+            oldrotor->sections[upper_section_idx].r,
+            oldrotor->sections[upper_section_idx].c,
+            rnew
+        );
+        newsection.beta = interp1(
+            oldrotor->sections[lower_section_idx].r,
+            oldrotor->sections[lower_section_idx].beta,
+            oldrotor->sections[upper_section_idx].r,
+            oldrotor->sections[upper_section_idx].beta,
+            rnew
+        );
+        newsection.airfoil = oldrotor->sections[upper_section_idx].airfoil;
+        //
+        //TODO: interpolate airfoils between the two sections
+        //
+        newrotor->sections[i] = newsection;
+    }
+    return newrotor;
+}
+
 //free allocated memory on a Rotor
-void free_rotor(Rotor *currentrotor) {
-    free(currentrotor->elements);
+void free_rotor(Rotor* currentrotor) {
+    free(currentrotor->sections);
     free(currentrotor);
 }
+
+//data structure for blade elements
+//INTERNAL USE ONLY
+typedef struct {
+    double c;           //chord length (m)
+    double beta;        //twist angle (rad)
+    double r;           //radial distance (m)
+    double dr;          //element width (m)
+    Airfoil airfoil;    //local airfoil data
+} Element;
 
 //data structure for the residual output
 //INTERNAL USE ONLY
@@ -550,7 +712,7 @@ typedef struct {
 //define the QProp residual function
 //NOTE: the implementation is an exact replica of the steps described in the QProp theory document
 //INTERNAL USE ONLY
-void residual(Residual* output, double psi, double Ua, double Ut, double R, double B, Element *currentelement, double rho, double mu, double a) {
+void residual(Residual* output, double psi, double Ua, double Ut, double R, double B, Element* currentelement, double rho, double mu, double a) {
     //calculate velocity components
     double U = sqrt(Ua*Ua + Ut*Ut);
     double Wa = 0.5*Ua + 0.5*U*sin(psi);
@@ -582,7 +744,6 @@ void residual(Residual* output, double psi, double Ua, double Ut, double R, doub
     //return output;
 }
 
-/*
 //find the root of a function f(x)=0 using the bisection method
 //INTERNAL USE ONLY
 double fzero(double (*f)(double), double a, double b, double tol, int itmax) {
@@ -619,46 +780,54 @@ double fzero(double (*f)(double), double a, double b, double tol, int itmax) {
     printf("ERROR while using fzero: maximum number of iterations reached\n");
     return 0;
 }
-*/
 
 //run qprop iterations
-RotorPerformance* qprop(Rotor *rotor, double Uinf, double Omega, double tol, int itmax, double rho, double mu, double a) {
+RotorPerformance* qprop(Rotor* rotor, double Uinf, double Omega, double tol, int itmax, double rho, double mu, double a) {
     //initialize variables
-    //RotorPerformance currentperformance;
     RotorPerformance* currentperformance = malloc(sizeof(RotorPerformance));
     if (!currentperformance) {
         printf("ERROR: memory allocation error in qprop()\n");
         return NULL;
     }
+    int nelems = rotor->nsections - 1;      //number of elements discretizing the blade
     currentperformance->T = 0.0;
     currentperformance->Q = 0.0;
     currentperformance->CT = 0.0;
     currentperformance->CP = 0.0;
     currentperformance->J = 0.0;
-    currentperformance->residuals = (double*) malloc(rotor->nelems*sizeof(double));
-    currentperformance->Gamma = (double*) malloc(rotor->nelems*sizeof(double));
-    currentperformance->lambdaw = (double*) malloc(rotor->nelems*sizeof(double));
-    currentperformance->r = (double*) malloc(rotor->nelems*sizeof(double));
-    currentperformance->W = (double*) malloc(rotor->nelems*sizeof(double));
-    currentperformance->phi = (double*) malloc(rotor->nelems*sizeof(double));
-    currentperformance->dTdr = (double*) malloc(rotor->nelems*sizeof(double));
-    currentperformance->dQdr = (double*) malloc(rotor->nelems*sizeof(double));
-    currentperformance->nelems = rotor->nelems;
+    currentperformance->residuals = (double*) malloc(nelems*sizeof(double));
+    currentperformance->Gamma = (double*) malloc(nelems*sizeof(double));
+    currentperformance->lambdaw = (double*) malloc(nelems*sizeof(double));
+    currentperformance->r = (double*) malloc(nelems*sizeof(double));
+    currentperformance->W = (double*) malloc(nelems*sizeof(double));
+    currentperformance->phi = (double*) malloc(nelems*sizeof(double));
+    currentperformance->dTdr = (double*) malloc(nelems*sizeof(double));
+    currentperformance->dQdr = (double*) malloc(nelems*sizeof(double));
+    currentperformance->nelems = nelems;
 
     //iterate over each element in the blade
-    for (int i=0; i<(rotor->nelems); ++i) {
-        Element *currentelement = &rotor->elements[i];
-        double psi1 = -M_PI/2;
-        double psi2 = +M_PI/2;
+    for (int i=0; i<nelems; ++i) {
+        //define the i-th element between the i-th and the (i+1)-th sections
+        Element currentelement;     //= {0, 0, 0, 0, (*airfoil)};
+        currentelement.c = 0.5*(rotor->sections[i].c + rotor->sections[i+1].c);
+        currentelement.beta = 0.5*(rotor->sections[i].beta + rotor->sections[i+1].beta);
+        currentelement.r = 0.5*(rotor->sections[i].r + rotor->sections[i+1].r);
+        currentelement.dr = rotor->sections[i+1].r - rotor->sections[i].r;
+        currentelement.airfoil = rotor->sections[i+1].airfoil;
+        //
+        //TODO: interpolate airfoils between the two sections
+        //
         
         //use bisection method to find where psi is zeroing the residual function
-        //Residual res = residual(psi1, Uinf, Omega*currentelement->r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
+        double psi1 = -M_PI/2;
+        //Residual res = residual(psi1, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
         Residual* res = malloc(sizeof(Residual));
-        residual(res, psi1, Uinf, Omega*currentelement->r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
+        residual(res, psi1, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
         double f1 = res->residual;
 
-        //res = residual(psi2, Uinf, Omega*currentelement->r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
-        residual(res, psi2, Uinf, Omega*currentelement->r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
+        double psi2 = +M_PI/2;
+        //res = residual(psi2, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
+        residual(res, psi2, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
         double f2 = res->residual;
 
         if (f1*f2 > 0) {
@@ -669,8 +838,8 @@ RotorPerformance* qprop(Rotor *rotor, double Uinf, double Omega, double tol, int
         double fc = 1.0;
         for (int j=0; j<itmax; ++j) {
             c = 0.5*(psi1+psi2);
-            //res = residual(c, Uinf, Omega*currentelement->r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
-            residual(res, c, Uinf, Omega*currentelement->r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
+            //res = residual(c, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
+            residual(res, c, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
             fc = res->residual;
             
             if (fabs(fc) <= tol && 0.5*(psi2-psi1) <= tol) {
@@ -691,13 +860,13 @@ RotorPerformance* qprop(Rotor *rotor, double Uinf, double Omega, double tol, int
         currentperformance->residuals[i] = fc;
         currentperformance->Gamma[i] = res->Gamma;
         currentperformance->lambdaw[i] = res->lambdaw;
-        currentperformance->r[i] = currentelement->r;
+        currentperformance->r[i] = currentelement.r;
         currentperformance->W[i] = res->W;
         currentperformance->phi[i] = res->phi;
-        currentperformance->dTdr[i] = 0.5 * rho * res->W * res->W * res->Cn * currentelement->c;
-        currentperformance->dQdr[i] = 0.5 * rho * res->W * res->W * res->Ct * currentelement->c * currentelement->r;
-        currentperformance->T += currentperformance->dTdr[i] * currentelement->dr;
-        currentperformance->Q += currentperformance->dQdr[i] * currentelement->dr;
+        currentperformance->dTdr[i] = 0.5 * rho * res->W * res->W * res->Cn * currentelement.c;
+        currentperformance->dQdr[i] = 0.5 * rho * res->W * res->W * res->Ct * currentelement.c * currentelement.r;
+        currentperformance->T += currentperformance->dTdr[i] * currentelement.dr;
+        currentperformance->Q += currentperformance->dQdr[i] * currentelement.dr;
     }
     currentperformance->T *= rotor->B;       //total thrust (N)
     currentperformance->Q *= rotor->B;       //total torque (N-m)
@@ -710,7 +879,7 @@ RotorPerformance* qprop(Rotor *rotor, double Uinf, double Omega, double tol, int
 }
 
 //free allocated memory on RotorPerformance
-void free_rotor_performance(RotorPerformance *perf) {
+void free_rotor_performance(RotorPerformance* perf) {
     free(perf->residuals);
     free(perf->r);
     free(perf->dTdr);

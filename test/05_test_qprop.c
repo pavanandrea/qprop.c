@@ -26,10 +26,10 @@ int main() {
         "./airfoil_polar_naca4412_Ncrit=6/NACA 4412_T1_Re0.300_M0.00_N6.0.txt",
         "./airfoil_polar_naca4412_Ncrit=6/NACA 4412_T1_Re0.500_M0.00_N6.0.txt"
     };
-    Airfoil naca4412 = import_xfoil_polars(filenames1, 10);
+    Airfoil* naca4412 = import_xfoil_polars(filenames1, 10);
 
     //load propeller geometry from APC file
-    Rotor apc10x7sf = import_rotor_geometry_apc("../validation/apc_10x7sf/10x7SF-PERF.PE0", &naca4412);
+    Rotor* apc10x7sf = import_rotor_geometry_apc("../validation/apc_10x7sf/10x7SF-PERF.PE0", naca4412);
     double Omega = 6014*M_PI/30;
     double tol = 1e-6;
     int itmax = 100;
@@ -38,20 +38,20 @@ int main() {
     double a = 0.0;
 
     //test #1: J = 0.05
-    //printf("TEST 1\n");
     double Uinf = 1.2729633333333334;
-    RotorPerformance perf1 = qprop(&apc10x7sf, Uinf, Omega, tol, itmax, rho, mu, a);
+    RotorPerformance* perf1 = qprop(apc10x7sf, Uinf, Omega, tol, itmax, rho, mu, a);
+    //printf("TEST 5.1:\n");
     //printf("    Uinf: %f\n", Uinf);
-    //printf("    Thrust: %f\n", perf1.T);
-    //printf("    Torque: %f\n", perf1.Q);
-    if (fabs(perf1.T - 7.811303879404407) <= 1e-6 && fabs(perf1.Q - 0.14308075154669447) <= 1e-6) {
-        printf("TEST 1 - PASSED :)\n");
+    //printf("    Thrust: %f\n", perf1->T);
+    //printf("    Torque: %f\n", perf1->Q);
+    if (fabs(perf1->T - 7.811303879404407) <= 1e-6 && fabs(perf1->Q - 0.14308075154669447) <= 1e-6) {
+        printf("TEST 5.1 - PASSED :)\n");
     }
     else {
-        printf("TEST 1 - FAILED :(\n");
-        unload_rotor_from_memory(&apc10x7sf);
-        unload_airfoil_from_memory(&naca4412);
-        unload_rotor_performance_from_memory(&perf1);
+        printf("TEST 5.1 - FAILED :(\n");
+        free_rotor(apc10x7sf);
+        free_airfoil(naca4412);
+        free_rotor_performance(perf1);
         return 0;
     }
     //Julia results:
@@ -67,21 +67,21 @@ int main() {
 
 
     //test #2: J = 0.75
-    //printf("TEST 2\n");
     Uinf = 19.09445;
-    RotorPerformance perf2 = qprop(&apc10x7sf, Uinf, Omega, tol, itmax, rho, mu, a);
+    RotorPerformance* perf2 = qprop(apc10x7sf, Uinf, Omega, tol, itmax, rho, mu, a);
+    //printf("TEST 5.2:\n");
     //printf("  Uinf: %f\n", Uinf);
     //printf("  Thrust: %f\n", perf2.T);
     //printf("  Torque: %f\n", perf2.Q);
-    if (fabs(perf2.T - 1.1348963862887862) <= 1e-6 && fabs(perf2.Q - 0.05252953779296362) <= 1e-6) {
-        printf("TEST 2 - PASSED :)\n");
+    if (fabs(perf2->T - 1.1348963862887862) <= 1e-6 && fabs(perf2->Q - 0.05252953779296362) <= 1e-6) {
+        printf("TEST 5.2 - PASSED :)\n");
     }
     else {
-        printf("TEST 2 - FAILED :(\n");
-        unload_rotor_from_memory(&apc10x7sf);
-        unload_airfoil_from_memory(&naca4412);
-        unload_rotor_performance_from_memory(&perf1);
-        unload_rotor_performance_from_memory(&perf2);
+        printf("TEST 5.2 - FAILED :(\n");
+        free_rotor(apc10x7sf);
+        free_airfoil(naca4412);
+        free_rotor_performance(perf1);
+        free_rotor_performance(perf2);
         return 0;
     }
     /*
@@ -103,9 +103,9 @@ int main() {
     Uinf = 19.09445 m/s  -  Thrust = 1.1348963862887862 N  -  Torque = 0.05252953779296362 N-m
     */
 
-    unload_rotor_from_memory(&apc10x7sf);
-    unload_airfoil_from_memory(&naca4412);
-    unload_rotor_performance_from_memory(&perf1);
-    unload_rotor_performance_from_memory(&perf2);
+    free_rotor(apc10x7sf);
+    free_airfoil(naca4412);
+    free_rotor_performance(perf1);
+    free_rotor_performance(perf2);
     return 0;
 }

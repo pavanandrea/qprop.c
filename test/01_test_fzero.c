@@ -21,10 +21,10 @@ double f1(double x) {
 int main() {
     //test #1: find root of f1 in [-1,0]
     if (fabs(fzero(f1,-1.0,0.0,1e-6,100) + 0.5812517) < 1e-5) {
-        printf("TEST 1 - PASSED :)\n");
+        printf("TEST 1.1 - PASSED :)\n");
     }
     else {
-        printf("TEST 1 - FAILED :(\n");
+        printf("TEST 1.1 - FAILED :(\n");
     }
     
     return 0;

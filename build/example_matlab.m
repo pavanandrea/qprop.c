@@ -1,7 +1,6 @@
 %--------------------------------------------------------------------------
-%   This script uses qprop.c to analyze the Groupner 6x3 propeller in
-%   hovering conditions, based on the example provided in the QPROP User
-%   Manual (https://web.mit.edu/drela/Public/web/qprop/)
+%   This script uses qprop.c to analyze the APC 10x7SF propeller in
+%   hovering conditions
 %--------------------------------------------------------------------------
 clear;
 clc;
@@ -67,7 +66,10 @@ myairfoil_ptr = calllib('qprop', 'import_xfoil_polars', filenames, numel(filenam
 %for example, you can download a PE0 file from the APC website, then use the following function:
 myrotor_ptr = calllib('qprop', 'import_rotor_geometry_apc', fullfile('..','validation/','apc_10x7sf/','10x7SF-PERF.PE0'), myairfoil_ptr);
 
-%NOTE: it is not currently possible to define the propeller geometry manually
+%OR, if you want to import a propeller geometry from the UIUC database:
+%myrotor_ptr = calllib('qprop', 'import_rotor_geometry_uiuc', fullfile('..','validation/','apc_10x7sf/','uiuc_data/','apcsf_10x7_geom.txt'), myairfoil_ptr, 10*0.0254, 2);
+
+%NOTE: it is not currently possible to define the propeller geometry manually in MATLAB
 
 
 %% run analysis
@@ -77,7 +79,7 @@ Uinf = 0.00;
 
 %specify rotor speed in rad/s
 %remember to multiply by pi/30 to convert from rpm to rad/s
-Omega = 14020*pi/30;
+Omega = 14020 * pi/30;
 
 %specify remaining parameters
 tol = 1e-6;         %residual tolerance
