@@ -10,7 +10,7 @@
 *******************************************************************************/
 #include <math.h>
 #include <stdio.h>
-#include "../qprop.c"
+#include "../src/qprop.c"
 
 int main() {
     //load NACA-4412 polars
@@ -30,10 +30,10 @@ int main() {
 
     //load propeller geometry from UIUC txt file
     Rotor* apc10x7sf = import_rotor_geometry_uiuc("../validation/apc_10x7sf/uiuc_data/apcsf_10x7_geom.txt", naca4412, 10*0.0254, 2);
-    /*printf("%8s  -  %8s  -  %8s\n", "r", "c", "beta");
-    for (int i=0; i<apc10x7sf->nsections; ++i) {
-        printf("%.6f  -  %.6f  -  %.6f\n", apc10x7sf->sections[i].r, apc10x7sf->sections[i].c, apc10x7sf->sections[i].beta);
-    }*/
+    //printf("%8s  -  %8s  -  %8s\n", "r", "c", "beta");
+    //for (int i=0; i<apc10x7sf->nsections; ++i) {
+    //    printf("%.6f  -  %.6f  -  %.6f\n", apc10x7sf->sections[i].r, apc10x7sf->sections[i].c, apc10x7sf->sections[i].beta);
+    //}
 
     //test #1: blade geometry
     if (apc10x7sf->nsections == 18
@@ -53,10 +53,10 @@ int main() {
     //printf("%i\n", rotor2->nsections);
     //printf("%f\n", rotor2->D);
     //printf("%f\n", rotor2->sections[rotor2->nsections-1].beta);
-    /*printf("%8s  -  %8s  -  %8s\n", "r", "c", "beta");
-    for (int i=0; i<rotor2->nsections; ++i) {
-        printf("%.6f  -  %.6f  -  %.6f\n", rotor2->sections[i].r, rotor2->sections[i].c, rotor2->sections[i].beta);
-    }*/
+    //printf("%8s  -  %8s  -  %8s\n", "r", "c", "beta");
+    //for (int i=0; i<rotor2->nsections; ++i) {
+    //    printf("%.6f  -  %.6f  -  %.6f\n", rotor2->sections[i].r, rotor2->sections[i].c, rotor2->sections[i].beta);
+    //}
     if (rotor2->nsections == 36
             && rotor2->D == 10*0.0254
             && fabs(rotor2->sections[rotor2->nsections-1].beta - deg2rad(8.43)) <= 1e-6) {
@@ -72,10 +72,10 @@ int main() {
 
     //test #3: coarsened blade with less sections
     Rotor* rotor3 = refine_rotor_sections(apc10x7sf, 9);
-    /*printf("%8s  -  %8s  -  %8s\n", "r", "c", "beta");
-    for (int i=0; i<rotor3->nsections; ++i) {
-        printf("%.6f  -  %.6f  -  %.6f\n", rotor3->sections[i].r, rotor3->sections[i].c, rotor3->sections[i].beta);
-    }*/
+    //printf("%8s  -  %8s  -  %8s\n", "r", "c", "beta");
+    //for (int i=0; i<rotor3->nsections; ++i) {
+    //    printf("%.6f  -  %.6f  -  %.6f\n", rotor3->sections[i].r, rotor3->sections[i].c, rotor3->sections[i].beta);
+    //}
     if (rotor3->nsections == 9
             && rotor3->D == 10*0.0254
             && fabs(rotor3->sections[rotor3->nsections-1].beta - deg2rad(8.43)) <= 1e-6) {
@@ -125,5 +125,8 @@ int main() {
     free_rotor(rotor2);
     free_rotor(rotor3);
     free_airfoil(naca4412);
+    free_rotor_performance(perf1);
+    free_rotor_performance(perf2);
+    free_rotor_performance(perf3);
     return 0;
 }

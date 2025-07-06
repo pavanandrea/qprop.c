@@ -7,7 +7,7 @@
 #   Author: Andrea Pavan
 #   License: MIT
 #-------------------------------------------------------------------------------
-include("../build/qprop-portable/qprop.jl");
+include("../src/bindings/qprop.jl");
 import .QProp;
 
 function main()

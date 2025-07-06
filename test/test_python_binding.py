@@ -9,7 +9,7 @@
 #-------------------------------------------------------------------------------
 import os
 import sys
-sys.path.insert(0, "../build/qprop-portable/")
+sys.path.insert(0, "../src/bindings/")
 import qprop
 
 def main():
@@ -41,7 +41,8 @@ def main():
         if f.endswith(".txt")
     ]
     naca4412 = qprop.import_xfoil_polars(filenames3)
-    if naca4412.size == 10 and naca4412.polars[0].alpha[0] == qprop.deg2rad(-15.0):
+
+    if naca4412.size == 10 and naca4412.polars[0].contents.alpha[0] == qprop.deg2rad(-15.0):
         print("TEST P3 - PASSED :)")
     else:
         print("TEST P3 - FAILED :(")

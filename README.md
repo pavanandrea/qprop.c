@@ -5,9 +5,9 @@
     <img src="docs/logo.svg"></img>
 </p>
 
+[🌐 Run on your browser](https://pavanandrea.github.io/qprop.c/webgui/index.html) &nbsp; &bullet; &nbsp;
 [⇩ Download](https://github.com/pavanandrea/qprop.c/releases/latest) &nbsp; &bullet; &nbsp;
-[✅ Validation](https://github.com/pavanandrea/qprop.c/tree/main/validation) <!--&nbsp; &bullet; &nbsp;-->
-<!--[🌐 Online Demo](https://pavanandrea.github.io/qprop.c/webgui/index.html)-->
+[✅ Validation](https://github.com/pavanandrea/qprop.c/tree/main/validation)
 
 *qprop.c* is a simple, lightweight library for analyzing the aerodynamic
 performance of propellers.

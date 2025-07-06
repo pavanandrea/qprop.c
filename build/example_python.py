@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-#   This script uses qprop.c to analyze the Groupner 6x3 propeller in hovering
+#   This script uses qprop.c to analyze the Graupner 6x3 propeller in hovering
 #   conditions, based on the example provided in the QPROP User Manual
 #   (https://web.mit.edu/drela/Public/web/qprop/)
 #

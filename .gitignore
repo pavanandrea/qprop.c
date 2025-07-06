@@ -4,5 +4,9 @@ dev/
 docs/*
 !docs/logo.svg
 isae2/
+src/bindings/__pycache__
+test/*
+!test/*.*
+!test/*/
 webgui/
 TODO.txt

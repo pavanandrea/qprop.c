@@ -10,7 +10,7 @@
 *******************************************************************************/
 #include <math.h>
 #include <stdio.h>
-#include "../qprop.c"
+#include "../src/qprop.c"
 
 int main() {
     //load NACA-4412 polars

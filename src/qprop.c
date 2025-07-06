@@ -48,7 +48,7 @@ double deg2rad(double deg) {
 //WARNING: the content of the file is not checked
 //the polar is supposed to start at min(alpha), go to 0 and finish at max(alpha)
 Polar* read_xfoil_polar_from_file(const char *filename) {
-    Polar* newpolar = malloc(sizeof(Polar));
+    Polar* newpolar = calloc(1, sizeof(Polar));
     if (!newpolar) {
         printf("ERROR: memory allocation error in read_xfoil_polar_from_file()\n");
         return NULL;
@@ -141,40 +141,45 @@ Polar* read_xfoil_polar_from_file(const char *filename) {
 }
 
 //free allocated memory on a polar
-void free_polar(Polar *currentpolar) {
+void free_polar(Polar* currentpolar) {
     if (currentpolar->alpha) {
         free(currentpolar->alpha);
+        currentpolar->alpha = NULL;
     }
     if (currentpolar->CL) {
         free(currentpolar->CL);
+        currentpolar->CL = NULL;
     }
     if (currentpolar->CD) {
         free(currentpolar->CD);
+        currentpolar->CD = NULL;
     }
     free(currentpolar);
+    currentpolar = NULL;
 }
 
 //free allocated memory on an airfoil
-void free_airfoil(Airfoil *currentairfoil) {
+void free_airfoil(Airfoil* currentairfoil) {
     for (int i=0; i<currentairfoil->size; ++i) {
-        free(currentairfoil->polars[i].alpha);
-        free(currentairfoil->polars[i].CL);
-        free(currentairfoil->polars[i].CD);
+        free_polar(currentairfoil->polars[i]);
+        currentairfoil->polars[i] = NULL;
     }
     free(currentairfoil->polars);
+    currentairfoil->polars = NULL;
     free(currentairfoil);
+    currentairfoil = NULL;
 }
 
 //import xfoil polars from multiple files
 //WARNING: safety checks on user input are not implemented yet
 //WARNING: the content of each file is not checked
 Airfoil* import_xfoil_polars(const char *filenames[], int number_of_files) {
-    Airfoil* newairfoil = malloc(sizeof(Airfoil));
+    Airfoil* newairfoil = calloc(1, sizeof(Airfoil));
     if (!newairfoil) {
         printf("ERROR: memory allocation error in import_xfoil_polars()\n");
         return NULL;
     }
-    newairfoil->polars = (Polar*) malloc(number_of_files*sizeof(Polar));
+    newairfoil->polars = calloc(number_of_files, sizeof(Polar));
     newairfoil->size = number_of_files;
     if (!newairfoil->polars) {
         printf("ERROR: memory allocation error in import_xfoil_polars()\n");
@@ -182,7 +187,7 @@ Airfoil* import_xfoil_polars(const char *filenames[], int number_of_files) {
         return NULL;
     }
     for (int i=0; i<number_of_files; ++i) {
-        newairfoil->polars[i] = *read_xfoil_polar_from_file(filenames[i]);
+        newairfoil->polars[i] = read_xfoil_polar_from_file(filenames[i]);
     }
     return newairfoil;
 }
@@ -191,7 +196,7 @@ Airfoil* import_xfoil_polars(const char *filenames[], int number_of_files) {
 Airfoil* analytic_polar_curves(double CL0, double CL_a, double CLmin, double CLmax,
                               double CD0, double CD2u, double CD2l, double CLCD0,
                               double REref, double REexp) {
-    Airfoil* newairfoil = malloc(sizeof(Airfoil));
+    Airfoil* newairfoil = calloc(1, sizeof(Airfoil));
     if (!newairfoil) {
         printf("ERROR: memory allocation error in analytic_polar_curves()\n");
         return NULL;
@@ -208,14 +213,15 @@ Airfoil* analytic_polar_curves(double CL0, double CL_a, double CLmin, double CLm
     
     //define "analytic airfoil"
     //Airfoil newairfoil;
-    newairfoil->polars = (Polar*) malloc(size_Re*sizeof(Polar));
+    newairfoil->polars = calloc(size_Re, sizeof(Polar*));
     newairfoil->size = size_Re;
     for (int i=0; i<size_Re; ++i) {
-        newairfoil->polars[i].Re = Re[i];
-        newairfoil->polars[i].alpha = (double*) malloc(size_alpha*sizeof(double));
-        newairfoil->polars[i].CL = (double*) malloc(size_alpha*sizeof(double));
-        newairfoil->polars[i].CD = (double*) malloc(size_alpha*sizeof(double));
-        newairfoil->polars[i].size = size_alpha;
+        newairfoil->polars[i] = calloc(1, sizeof(Polar));
+        newairfoil->polars[i]->Re = Re[i];
+        newairfoil->polars[i]->alpha = calloc(size_alpha, sizeof(double));
+        newairfoil->polars[i]->CL = calloc(size_alpha, sizeof(double));
+        newairfoil->polars[i]->CD = calloc(size_alpha, sizeof(double));
+        newairfoil->polars[i]->size = size_alpha;
         for (int j=0; j<size_alpha; ++j) {
             //linear CL
             double CL = CL0 + CL_a * deg2rad(alpha[j]);     //neglecting beta
@@ -235,9 +241,9 @@ Airfoil* analytic_polar_curves(double CL0, double CL_a, double CLmin, double CLm
                 double aCD0 = (CLCD0 - CL0) / CL_a;
                 CD += 2 * pow(sin(deg2rad(alpha[j]) - aCD0), 2);
             }
-            newairfoil->polars[i].alpha[j] = deg2rad(alpha[j]);
-            newairfoil->polars[i].CL[j] = CL;
-            newairfoil->polars[i].CD[j] = CD;
+            newairfoil->polars[i]->alpha[j] = deg2rad(alpha[j]);
+            newairfoil->polars[i]->CL[j] = CL;
+            newairfoil->polars[i]->CD[j] = CD;
         }
     }
     return newairfoil;
@@ -263,7 +269,7 @@ typedef struct {
 //interpolate airfoil coefficient across a polar
 //INTERNAL USE ONLY
 PolarPoint* interpolate_polar(Polar* currentpolar, double alpha) {
-    PolarPoint* query = malloc(sizeof(PolarPoint));
+    PolarPoint* query = calloc(1, sizeof(PolarPoint));
     if (!query) {
         printf("ERROR: memory allocation error in interpolate_polar()\n");
         return NULL;
@@ -332,9 +338,9 @@ PolarPoint* interpolate_polar(Polar* currentpolar, double alpha) {
 //INTERNAL USE ONLY
 PolarPoint* interpolate_airfoil_polars(Airfoil* currentairfoil, double alpha, double Re, double Mach) {
     //find the two polars that bracket the query point
-    PolarPoint* query = malloc(sizeof(PolarPoint));
+    PolarPoint* query = calloc(1, sizeof(PolarPoint));
     if (!query) {
-        printf("ERROR: memory allocation error in interpolate_polar()\n");
+        printf("ERROR: memory allocation error in interpolate_airfoil_polars()\n");
         return NULL;
     }
     query->alpha = alpha;
@@ -343,18 +349,18 @@ PolarPoint* interpolate_airfoil_polars(Airfoil* currentairfoil, double alpha, do
 
     int lower_polar_idx = 0;
     int upper_polar_idx = currentairfoil->size - 1;
-    if (Re <= currentairfoil->polars[0].Re) {
+    if (Re <= currentairfoil->polars[0]->Re) {
         //use the lowest polar
         upper_polar_idx = 0;
     }
-    else if (Re > currentairfoil->polars[currentairfoil->size-1].Re) {
+    else if (Re > currentairfoil->polars[currentairfoil->size-1]->Re) {
         //use the highest polar
         lower_polar_idx = currentairfoil->size - 1;
     }
     else {
         //interpolate between two polars
         for (int i=1; i<(currentairfoil->size); ++i) {
-            if (Re > currentairfoil->polars[i-1].Re && Re <= currentairfoil->polars[i].Re) {
+            if (Re > currentairfoil->polars[i-1]->Re && Re <= currentairfoil->polars[i]->Re) {
                 lower_polar_idx = i-1;
                 upper_polar_idx = i;
                 break;
@@ -363,24 +369,26 @@ PolarPoint* interpolate_airfoil_polars(Airfoil* currentairfoil, double alpha, do
     }
 
     //interpolate across alpha at the lower and upper polars
-    PolarPoint* lower = interpolate_polar(&(currentairfoil->polars[lower_polar_idx]), alpha);
-    PolarPoint* upper = interpolate_polar(&(currentairfoil->polars[upper_polar_idx]), alpha);
+    PolarPoint* lower = interpolate_polar(currentairfoil->polars[lower_polar_idx], alpha);
+    PolarPoint* upper = interpolate_polar(currentairfoil->polars[upper_polar_idx], alpha);
 
     //interpolate across Re
     query->CL = interp1(
-        currentairfoil->polars[lower_polar_idx].Re,     //x1
+        currentairfoil->polars[lower_polar_idx]->Re,    //x1
         lower->CL,                                      //y1
-        currentairfoil->polars[upper_polar_idx].Re,     //x2
+        currentairfoil->polars[upper_polar_idx]->Re,    //x2
         upper->CL,                                      //y2
         Re                                              //xq
     );
     query->CD = interp1(
-        currentairfoil->polars[lower_polar_idx].Re,     //x1
+        currentairfoil->polars[lower_polar_idx]->Re,    //x1
         lower->CD,                                      //y1
-        currentairfoil->polars[upper_polar_idx].Re,     //x2
+        currentairfoil->polars[upper_polar_idx]->Re,    //x2
         upper->CD,                                      //y2
         Re                                              //xq
     );
+    free(lower);
+    free(upper);
 
     //optional: correct for Mach number using the Prantdl-Meyer compressibility factor
     //set Mach = 0 to disable correction
@@ -393,9 +401,23 @@ PolarPoint* interpolate_airfoil_polars(Airfoil* currentairfoil, double alpha, do
     return query;
 }
 
+//append a new section at the end of the rotor
+//NOTE: the rotor diameter is NOT updated!
+void push_rotor_section(Rotor* rotor, double c, double beta, double r, Airfoil* airfoil) {
+    if (!rotor) {
+        return;
+    }
+    rotor->sections = realloc(rotor->sections, (rotor->nsections+1)*sizeof(Section));
+    rotor->nsections += 1;
+    rotor->sections[rotor->nsections-1].c = c;
+    rotor->sections[rotor->nsections-1].beta = beta;
+    rotor->sections[rotor->nsections-1].r = r;
+    rotor->sections[rotor->nsections-1].airfoil = *airfoil;
+}
+
 //read propeller geometry from APC PE0 file
 Rotor* import_rotor_geometry_apc(const char *filename, Airfoil* airfoil) {
-    Rotor* newrotor = malloc(sizeof(Rotor));
+    Rotor* newrotor = calloc(1, sizeof(Rotor));
     if (!newrotor) {
         printf("ERROR: memory allocation error in import_rotor_geometry_apc()\n");
         return NULL;
@@ -475,25 +497,18 @@ Rotor* import_rotor_geometry_apc(const char *filename, Airfoil* airfoil) {
         //parse line
         if (parse_line && token_counter == 13) {
             //extract values at the current section
-            double r = 0.0;
             double c = 0.0;
             double beta = 0.0;
+            double r = 0.0;
             if (sscanf(line, "%lf %lf %*f %*f %*f %*f %*f %lf %*f %*f %*f %*f %*f", &r, &c, &beta) == 3) {
                 //convert units to SI
-                r = r * 0.0254;
                 c = c * 0.0254;
                 beta = deg2rad(beta);
+                r = r * 0.0254;
 
                 //create new section
-                Section newsection; //= {0, 0, 0, (*airfoil)};
-                newsection.r = r;
-                newsection.c = c;
-                newsection.beta = beta;
-                newsection.airfoil = (*airfoil);
-                newrotor->sections = (Section*) realloc(newrotor->sections, (newrotor->nsections+1)*sizeof(Section));
+                push_rotor_section(newrotor, c, beta, r, airfoil);
                 newrotor->D = 2*r;
-                newrotor->nsections += 1;
-                newrotor->sections[newrotor->nsections-1] = newsection;
             }
         }
 
@@ -518,7 +533,7 @@ Rotor* import_rotor_geometry_apc(const char *filename, Airfoil* airfoil) {
 
 //read propeller geometry from UIUC TXT file
 Rotor* import_rotor_geometry_uiuc(const char *filename, Airfoil* airfoil, double D, int B) {
-    Rotor* newrotor = malloc(sizeof(Rotor));
+    Rotor* newrotor = calloc(1, sizeof(Rotor));
     if (!newrotor) {
         printf("ERROR: memory allocation error in import_rotor_geometry_uiuc()\n");
         return NULL;
@@ -579,24 +594,18 @@ Rotor* import_rotor_geometry_uiuc(const char *filename, Airfoil* airfoil, double
         //parse line
         if (parse_line && token_counter == 3) {
             //extract values at the current section
-            double r = 0.0;
             double c = 0.0;
             double beta = 0.0;
+            double r = 0.0;
             if (sscanf(line, "%lf %lf %lf", &r, &c, &beta) == 3) {
                 //convert units to SI
-                r = r * (D/2);
                 c = c * (D/2);
                 beta = deg2rad(beta);
+                r = r * (D/2);
 
                 //create new section
-                Section newsection; //= {0, 0, 0, (*airfoil)};
-                newsection.r = r;
-                newsection.c = c;
-                newsection.beta = beta;
-                newsection.airfoil = (*airfoil);
-                newrotor->sections = (Section*) realloc(newrotor->sections, (newrotor->nsections+1)*sizeof(Section));
-                newrotor->nsections += 1;
-                newrotor->sections[newrotor->nsections-1] = newsection;
+                push_rotor_section(newrotor, c, beta, r, airfoil);
+                newrotor->D = 2*r;
             }
         }
     }
@@ -613,7 +622,7 @@ Rotor* import_rotor_geometry_uiuc(const char *filename, Airfoil* airfoil, double
 //change number of sections in a propeller geometry
 Rotor* refine_rotor_sections(Rotor* oldrotor, int nsections) {
     //initialize variables
-    Rotor* newrotor = malloc(sizeof(Rotor));
+    Rotor* newrotor = calloc(1, sizeof(Rotor));
     if (!newrotor) {
         printf("ERROR: memory allocation error in refine_rotor_sections()\n");
         return NULL;
@@ -621,7 +630,7 @@ Rotor* refine_rotor_sections(Rotor* oldrotor, int nsections) {
     newrotor->D = oldrotor->D;
     newrotor->B = oldrotor->B;
     newrotor->nsections = nsections;
-    newrotor->sections = (Section*) malloc(nsections*sizeof(Section));
+    newrotor->sections = (Section*) calloc(nsections, sizeof(Section));
     if (!newrotor->sections) {
         printf("ERROR: memory allocation error in refine_rotor_sections()\n");
         return NULL;
@@ -682,7 +691,9 @@ Rotor* refine_rotor_sections(Rotor* oldrotor, int nsections) {
 //free allocated memory on a Rotor
 void free_rotor(Rotor* currentrotor) {
     free(currentrotor->sections);
+    currentrotor->sections = NULL;
     free(currentrotor);
+    currentrotor = NULL;
 }
 
 //data structure for blade elements
@@ -717,7 +728,6 @@ void residual(Residual* output, double psi, double Ua, double Ut, double R, doub
     double U = sqrt(Ua*Ua + Ut*Ut);
     double Wa = 0.5*Ua + 0.5*U*sin(psi);
     double Wt = 0.5*Ut + 0.5*U*cos(psi);
-    //output = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     output->va = Wa - Ua;
     output->vt = Ut - Wt;
 
@@ -741,7 +751,7 @@ void residual(Residual* output, double psi, double Ua, double Ut, double R, doub
     output->residual = output->Gamma - 0.5 * output->W * (currentelement->c) * operatingpoint->CL;
     output->Cn = operatingpoint->CL* Wt / output->W - operatingpoint->CD * Wa / output->W;
     output->Ct = operatingpoint->CL* Wa / output->W + operatingpoint->CD * Wt / output->W;
-    //return output;
+    free(operatingpoint);
 }
 
 //find the root of a function f(x)=0 using the bisection method
@@ -784,26 +794,27 @@ double fzero(double (*f)(double), double a, double b, double tol, int itmax) {
 //run qprop iterations
 RotorPerformance* qprop(Rotor* rotor, double Uinf, double Omega, double tol, int itmax, double rho, double mu, double a) {
     //initialize variables
-    RotorPerformance* currentperformance = malloc(sizeof(RotorPerformance));
-    if (!currentperformance) {
+    RotorPerformance* perf = calloc(1, sizeof(RotorPerformance));
+    if (!perf) {
         printf("ERROR: memory allocation error in qprop()\n");
         return NULL;
     }
     int nelems = rotor->nsections - 1;      //number of elements discretizing the blade
-    currentperformance->T = 0.0;
-    currentperformance->Q = 0.0;
-    currentperformance->CT = 0.0;
-    currentperformance->CP = 0.0;
-    currentperformance->J = 0.0;
-    currentperformance->residuals = (double*) malloc(nelems*sizeof(double));
-    currentperformance->Gamma = (double*) malloc(nelems*sizeof(double));
-    currentperformance->lambdaw = (double*) malloc(nelems*sizeof(double));
-    currentperformance->r = (double*) malloc(nelems*sizeof(double));
-    currentperformance->W = (double*) malloc(nelems*sizeof(double));
-    currentperformance->phi = (double*) malloc(nelems*sizeof(double));
-    currentperformance->dTdr = (double*) malloc(nelems*sizeof(double));
-    currentperformance->dQdr = (double*) malloc(nelems*sizeof(double));
-    currentperformance->nelems = nelems;
+    perf->T = 0.0;
+    perf->Q = 0.0;
+    perf->CT = 0.0;
+    perf->CP = 0.0;
+    perf->J = 0.0;
+    perf->residuals = calloc(nelems, sizeof(double));
+    perf->Gamma = calloc(nelems, sizeof(double));
+    perf->lambdaw = calloc(nelems, sizeof(double));
+    perf->r = calloc(nelems, sizeof(double));
+    perf->W = calloc(nelems, sizeof(double));
+    perf->phi = calloc(nelems, sizeof(double));
+    perf->dTdr = calloc(nelems, sizeof(double));
+    perf->dQdr = calloc(nelems, sizeof(double));
+    perf->nelems = nelems;
+    Residual res;       //all calculations are sequential, so all the residuals can be stored in the same variable
 
     //iterate over each element in the blade
     for (int i=0; i<nelems; ++i) {
@@ -820,27 +831,23 @@ RotorPerformance* qprop(Rotor* rotor, double Uinf, double Omega, double tol, int
         
         //use bisection method to find where psi is zeroing the residual function
         double psi1 = -M_PI/2;
-        //Residual res = residual(psi1, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
-        Residual* res = malloc(sizeof(Residual));
-        residual(res, psi1, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
-        double f1 = res->residual;
+        residual(&res, psi1, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
+        double f1 = res.residual;
 
         double psi2 = +M_PI/2;
-        //res = residual(psi2, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
-        residual(res, psi2, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
-        double f2 = res->residual;
+        residual(&res, psi2, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
+        double f2 = res.residual;
 
         if (f1*f2 > 0) {
             printf("ERROR on element %i: res(a) and res(b) have the same sign\n", i);
-            return currentperformance;
+            return perf;
         }
         double c = 0;
         double fc = 1.0;
         for (int j=0; j<itmax; ++j) {
             c = 0.5*(psi1+psi2);
-            //res = residual(c, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, currentelement, rho, mu, a);
-            residual(res, c, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
-            fc = res->residual;
+            residual(&res, c, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
+            fc = res.residual;
             
             if (fabs(fc) <= tol && 0.5*(psi2-psi1) <= tol) {
                 //printf("Element #%i - Converged after %i iterations (residual = %e)\n", i, j, fc);
@@ -857,32 +864,45 @@ RotorPerformance* qprop(Rotor* rotor, double Uinf, double Omega, double tol, int
         }
 
         //calculate element thrust and torque
-        currentperformance->residuals[i] = fc;
-        currentperformance->Gamma[i] = res->Gamma;
-        currentperformance->lambdaw[i] = res->lambdaw;
-        currentperformance->r[i] = currentelement.r;
-        currentperformance->W[i] = res->W;
-        currentperformance->phi[i] = res->phi;
-        currentperformance->dTdr[i] = 0.5 * rho * res->W * res->W * res->Cn * currentelement.c;
-        currentperformance->dQdr[i] = 0.5 * rho * res->W * res->W * res->Ct * currentelement.c * currentelement.r;
-        currentperformance->T += currentperformance->dTdr[i] * currentelement.dr;
-        currentperformance->Q += currentperformance->dQdr[i] * currentelement.dr;
+        perf->residuals[i] = fc;
+        perf->Gamma[i] = res.Gamma;
+        perf->lambdaw[i] = res.lambdaw;
+        perf->r[i] = currentelement.r;
+        perf->W[i] = res.W;
+        perf->phi[i] = res.phi;
+        perf->dTdr[i] = 0.5 * rho * res.W * res.W * res.Cn * currentelement.c;
+        perf->dQdr[i] = 0.5 * rho * res.W * res.W * res.Ct * currentelement.c * currentelement.r;
+        perf->T += perf->dTdr[i] * currentelement.dr;
+        perf->Q += perf->dQdr[i] * currentelement.dr;
     }
-    currentperformance->T *= rotor->B;       //total thrust (N)
-    currentperformance->Q *= rotor->B;       //total torque (N-m)
-    double n = Omega/(2*M_PI);              //number revolutions per second (rev/s)
-    currentperformance->CT = currentperformance->T / (rho * pow(n,2) * pow(rotor->D,4));      //thrust coefficient
-    double CQ = currentperformance->Q / (rho * pow(n,2) * pow(rotor->D,5));                  //torque coefficient
-    currentperformance->CP = 2*M_PI * CQ;            //power coefficient
-    currentperformance->J = Uinf / (n * rotor->D);   //advance ratio
-    return currentperformance;
+    perf->T *= rotor->B;                //total thrust (N)
+    perf->Q *= rotor->B;                //total torque (N-m)
+    double n = Omega/(2*M_PI);          //revolutions per second (rev/s)
+    perf->CT = perf->T / (rho * pow(n,2) * pow(rotor->D,4));        //thrust coefficient
+    double CQ = perf->Q / (rho * pow(n,2) * pow(rotor->D,5));       //torque coefficient
+    perf->CP = 2*M_PI * CQ;             //power coefficient
+    perf->J = Uinf / (n * rotor->D);    //advance ratio
+    return perf;
 }
 
 //free allocated memory on RotorPerformance
 void free_rotor_performance(RotorPerformance* perf) {
     free(perf->residuals);
+    perf->residuals = NULL;
+    free(perf->Gamma);
+    perf->Gamma = NULL;
+    free(perf->lambdaw);
+    perf->lambdaw = NULL;
     free(perf->r);
+    perf->r = NULL;
+    free(perf->W);
+    perf->W = NULL;
+    free(perf->phi);
+    perf->phi = NULL;
     free(perf->dTdr);
+    perf->dTdr = NULL;
     free(perf->dQdr);
+    perf->dQdr = NULL;
     free(perf);
+    perf = NULL;
 }

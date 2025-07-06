@@ -38,7 +38,7 @@ typedef struct {
 
 //data structure for airfoils
 typedef struct {
-    Polar* polars;      //array of polars - typically at different Re
+    Polar** polars;     //array of pointers to polars - typically at different Re
     int size;           //number of polars in the airfoil
 } Airfoil;
 

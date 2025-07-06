@@ -10,7 +10,7 @@
 *******************************************************************************/
 #include <math.h>
 #include <stdio.h>
-#include "../qprop.c"
+#include "../src/qprop.c"
 
 //define a function to find the root of
 //this function has 5 roots: -2.7946409, -1.2061061, -0.5812517, 1.8449926, 2.7370304
