@@ -1,0 +1,147 @@
+/*******************************************************************************
+    A simple propeller calculator built on top of qprop.c using WASM.
+    This file contains all the styling properties for index.html.
+
+    Author: Andrea Pavan
+    License: MIT
+*******************************************************************************/
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+}
+
+.content {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+button {
+    width: 100%;
+    height: 50px;
+    background-color: #4CAF50;
+    color: #fff;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #3e8e41;
+}
+
+input[type="text"], select {
+    width: 100%;
+    height: 30px;
+    margin-bottom: 20px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+}
+
+
+/*** GEOMETRY TABLE ***/
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 5px;
+    text-align: left;
+}
+
+th {
+    background-color: #f0f0f0;
+}
+
+.geometry-table {
+    margin-bottom: 20px;
+}
+
+.geometry-table td {
+    vertical-align: middle;
+}
+
+.dropdown-zone {
+    margin-bottom: 20px;
+}
+
+.dropdown-zone select {
+    width: 100%;
+    height: 30px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.add-remove-buttons {
+    display: flex;
+}
+
+.remove-row {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.remove-row:hover {
+    background-color: #c0392b;
+}
+
+
+/*** TITLE BAR ***/
+
+.title-bar {
+    background-color: #202020;
+    color: #747C80;
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 0 10px #2020206e;
+}
+
+.title-bar h1 {
+    margin: 0;
+}
+
+
+/*** FOOTER ***/
+
+.footer-bar {
+    background-color: #202020;
+    color: #747C80;
+    padding: 10px;
+    padding-bottom: 20px;
+    text-align: center;
+    box-shadow: 0 0 10px #2020206e;
+}
+.footer-bar p {
+    margin: 0;
+}
+
+
+/*** RESULTS ***/
+
+#results-container {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#results {
+    padding: 20px;
+}

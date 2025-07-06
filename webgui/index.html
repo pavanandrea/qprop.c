@@ -1,0 +1,177 @@
+<!------------------------------------------------------------------------------
+    A simple propeller calculator built on top of qprop.c using WASM.
+
+    How to run:
+        python3 -m http.server 8080 & firefox localhost:8080/index.html
+    Simply opening index.html does not work due to CORS issues
+
+    Author: Andrea Pavan
+    License: MIT
+------------------------------------------------------------------------------->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Propeller Calculator</title>
+    <link rel="stylesheet" type="text/css" href="style.css"/>
+</head>
+
+<body>
+    <div class="title-bar">
+        <h1>Online Propeller Calculator</h1>
+    </div>
+    <div class="content">
+        <form id="gui-form">
+            <label for="prop-name">Name:</label>
+            <input type="text" id="prop-name" name="prop-name" value="Graupner 6x3">
+            <label for="diameter">Diameter (mm):</label>
+            <input type="text" id="diameter" name="diameter" value="152.4">
+            <label for="num-blades">Number of blades:</label>
+            <input type="text" id="num-blades" name="num-blades" value="2">
+            <label for="rotor-speed">Rotor speed (rpm):</label>
+            <input type="text" id="rotor-speed" name="rotor-speed" value="14000">
+            <label for="airspeed">Airspeed (m/s):</label>
+            <input type="text" id="airspeed" name="airspeed" value="0.0">
+            <label for="airfoil">Airfoil:</label>
+            <select id="airfoil" name="airfoil">
+                <option value="NACA 4412">NACA 4412</option>
+                <option value="NACA 0012">NACA 0012</option>
+                <option value="Eppler E63">Eppler E63</option>
+                <option value="Clark Y">Clark Y</option>
+            </select>
+            <div class="geometry">
+                <h2>Geometry:</h2>
+                <table class="geometry-table" id="geometry-table">
+                    <thead>
+                        <tr>
+                            <th>Section</th>
+                            <th>Radius (mm)</th>
+                            <th>Chord (mm)</th>
+                            <th>Twist (deg)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="geometry-table-body">
+                        <tr>
+                            <td><input type="text" value="Hub Section" disabled></td>
+                            <td><input type="text" value="19.05"></td>
+                            <td><input type="text" value="16.764"></td>
+                            <td><input type="text" value="27.5"></td>
+                            <td>
+                                <!--<button type="button" disabled>+</button>
+                                <button type="button" disabled>-</button>-->
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td><input type="text" value="25.4"></td>
+                            <td><input type="text" value="17.526"></td>
+                            <td><input type="text" value="22.0"></td>
+                            <td>
+                                <div class="add-remove-buttons">
+                                    <button type="button" class="add-row">+</button>
+                                    <button type="button" class="remove-row">-</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td><input type="text" value="38.1"></td>
+                            <td><input type="text" value="16.002"></td>
+                            <td><input type="text" value="15.2"></td>
+                            <td>
+                                <div class="add-remove-buttons">
+                                    <button type="button" class="add-row">+</button>
+                                    <button type="button" class="remove-row">-</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td><input type="text" value="50.8"></td>
+                            <td><input type="text" value="13.97"></td>
+                            <td><input type="text" value="10.2"></td>
+                            <td>
+                                <div class="add-remove-buttons">
+                                    <button type="button" class="add-row">+</button>
+                                    <button type="button" class="remove-row">-</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td><input type="text" value="63.5"></td>
+                            <td><input type="text" value="11.176"></td>
+                            <td><input type="text" value="6.5"></td>
+                            <td>
+                                <div class="add-remove-buttons">
+                                    <button type="button" class="add-row">+</button>
+                                    <button type="button" class="remove-row">-</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td><input type="text" value="73.025"></td>
+                            <td><input type="text" value="7.62"></td>
+                            <td><input type="text" value="4.6"></td>
+                            <td>
+                                <div class="add-remove-buttons">
+                                    <button type="button" class="add-row">+</button>
+                                    <button type="button" class="remove-row">-</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" value="Tip Section" disabled></td>
+                            <td><input type="text" value="76.2"></td>
+                            <td><input type="text" value="4.826"></td>
+                            <td><input type="text" value="4.2"></td>
+                            <td>
+                                <!--<button type="button" disabled>+</button>
+                                <button type="button" disabled>-</button>-->
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="extra">
+                <h2>Extra:</h2>
+                <!--<label for="tip-loss-function">Tip loss function:</label>
+                <select id="tip-loss-function" name="tip-loss-function" disabled>
+                    <option value="Prandtl">Prandtl</option>
+                    <option value="Quadratic">Quadratic</option>
+                </select>-->
+                <label for="air-density">Air density (kg/m3):</label>
+                <input type="text" id="air-density" name="air-density" value="1.225">
+                <label for="air-dynamic-viscosity">Air dynamic viscosity (Pa-s):</label>
+                <input type="text" id="air-dynamic-viscosity" name="air-dynamic-viscosity" value="1.81e-5">
+                <!--<label for="numerical-method">Numerical method:</label>
+                <select id="numerical-method" name="numerical-method" disabled>
+                    <option value="QPROP">QPROP</option>
+                    <option value="Traditional BEMT">Traditional BEMT</option>
+                </select>-->
+                <label>Number of panels (0 = calculate from sections):</label>
+                <input type="text" id="refine-panels" name="refine-panels" value="50">
+                <button type="button" id="run-button">Run</button>
+            </div>
+        </form>
+
+        <div id="results-container" style="display: none;">
+            <h2>Results:</h2>
+            <div id="results"></div>
+        </div>
+    </div>
+    <div class="footer-bar">
+        <h3>Powered by <a href="https://github.com/pavanandrea/qprop.c" target="_blank" style="color: #747C80;">qprop.c</a></h3>
+        <p>Copyright &copy; 2025 Andrea Pavan</p>
+        <p>License: <a href="https://github.com/pavanandrea/qprop.c/blob/main/LICENSE" target="_blank" style="color: #747C80;">MIT</a></p>
+        <p>Made from scratch in raw HTML and CSS</p>
+    </div>
+
+    <script type="text/javascript" src="qprop_web_interface.js"></script>
+    <script type="text/javascript" src="main.js" defer></script>
+</body>
+</html>
