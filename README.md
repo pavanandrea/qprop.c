@@ -22,14 +22,6 @@ QPROP utilizes vortex theory instead.
 This approach offers several numerical advantages, such as avoiding the
 infamous singularity at $\phi=0$, and provides more accurate results.
 
-<!--
-<img src="./validation/apc_10x7sf/results_performance_thrust.svg" width="45%" />
-<img src="./validation/apc_10x7sf/results_performance_efficiency.svg" width="45%" />
-
-<img src="./validation/apc_16x8e/results_static_thrust.svg" width="45%" />
-<img src="./validation/apc_16x8e/results_static_power.svg" width="45%" />
--->
-
 ![Thrust Diagram](./validation/apc_10x7sf/results_performance_thrust.svg) | ![Efficiency](./validation/apc_10x7sf/results_performance_efficiency.svg)
 :------------------------------------------------------------------------:|:------------------------------------------------------------------------:
 ![Static Thrust](./validation/apc_16x8e/results_static_thrust.svg)        | ![Static Power](./validation/apc_16x8e/results_static_power.svg)
@@ -127,9 +119,8 @@ While the mathematical formulation of *qprop.c* is the same as the original QPRO
 the implementation is written from scratch without looking at the original code.
 
 This allows *qprop.c* to be released under the MIT License, allowing its use virtually
-without restrictions. For example, if you are developing a closed-source software,
-you can integrate and distribute *qprop.c* without sharing the source code.
-
+without restrictions. <!--For example, if you are developing a closed-source software,-->
+<!--you can integrate and distribute *qprop.c* without sharing the source code.-->
 See the `LICENSE` file for details.
 
 
