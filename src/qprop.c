@@ -30,18 +30,13 @@
 #include <string.h>
 #include "qprop.h"
 
+#define PI 3.14159265358979323846
 #define MAX_LINE_LENGTH 256     //maximum length of a line in a xfoil polar file
-
-
-
-//---------------------------
-//  FUNCTION DEFINITIONS
-//---------------------------
 
 
 //converts degrees to radians
 double deg2rad(double deg) {
-    return deg*M_PI/180.0;
+    return deg*PI/180.0;
 }
 
 //read xfoil polar from file
@@ -170,6 +165,32 @@ void free_airfoil(Airfoil* currentairfoil) {
     currentairfoil = NULL;
 }
 
+//sort airfoil polars from lowest to highest Re - selection sort algorithm
+//INTERNAL USE ONLY
+void sort_airfoil_polars(Airfoil* currentairfoil)
+{
+    if (!currentairfoil || !currentairfoil->polars || currentairfoil->size<1) {
+        //nothing to sort
+        return;
+    }
+
+    for (int i=0; i<currentairfoil->size; ++i) {
+        //find the lowest Re
+        int lowest_idx = i;
+        for (int j=i; j<currentairfoil->size; ++j) {
+            if (currentairfoil->polars[j]->Re < currentairfoil->polars[lowest_idx]->Re) {
+                lowest_idx = j;
+            }
+        }
+
+        //place smallest Re first
+        Polar* tmp = currentairfoil->polars[i];
+        currentairfoil->polars[i] = currentairfoil->polars[lowest_idx];
+        currentairfoil->polars[lowest_idx] = tmp;
+    }
+    return;
+}
+
 //import xfoil polars from multiple files
 //WARNING: safety checks on user input are not implemented yet
 //WARNING: the content of each file is not checked
@@ -179,16 +200,26 @@ Airfoil* import_xfoil_polars(const char *filenames[], int number_of_files) {
         printf("ERROR: memory allocation error in import_xfoil_polars()\n");
         return NULL;
     }
-    newairfoil->polars = calloc(number_of_files, sizeof(Polar));
-    newairfoil->size = number_of_files;
+    newairfoil->polars = calloc(number_of_files, sizeof(Polar*));
+    newairfoil->size = 0;
     if (!newairfoil->polars) {
         printf("ERROR: memory allocation error in import_xfoil_polars()\n");
         free(newairfoil);
         return NULL;
     }
+
+    //read polars
     for (int i=0; i<number_of_files; ++i) {
         newairfoil->polars[i] = read_xfoil_polar_from_file(filenames[i]);
+        newairfoil->size += 1;
+        //if (i>=1 && newairfoil->polars[i]->Re < newairfoil->polars[i-1]->Re) {
+        //    printf("WARNING in import_xfoil_polars(): polar #%d (Re=%.0f) has a lower Reynolds number than the preceding polar (Re=%.0f). Results may be inaccurate.\n", i, newairfoil->polars[i]->Re, newairfoil->polars[i-1]->Re);
+        //}
     }
+
+    //sort polars from lowest to highest Re
+    sort_airfoil_polars(newairfoil);
+
     return newairfoil;
 }
 
@@ -283,7 +314,7 @@ PolarPoint* interpolate_polar(Polar* currentpolar, double alpha) {
         //interpolate to retrieve CD=2.0 at alpha=-90°
         query->CL = currentpolar->CL[0];
         query->CD = interp1(
-            -M_PI/2,
+            -PI/2,
             2.0,
             currentpolar->alpha[0],
             currentpolar->CD[0],
@@ -301,7 +332,7 @@ PolarPoint* interpolate_polar(Polar* currentpolar, double alpha) {
         query->CD = interp1(
             currentpolar->alpha[currentpolar->size-1],
             currentpolar->CD[currentpolar->size-1],
-            M_PI/2,
+            PI/2,
             2.0,
             alpha
         );
@@ -392,7 +423,7 @@ PolarPoint* interpolate_airfoil_polars(Airfoil* currentairfoil, double alpha, do
 
     //optional: correct for Mach number using the Prantdl-Meyer compressibility factor
     //set Mach = 0 to disable correction
-    if (Mach > 0.0 && Mach < 0.99){
+    if (Mach > 0.01 && Mach < 0.99){
         query->CL = query->CL / sqrt(1.0 - Mach*Mach);
         //do not apply correction when Mach number exceeds 1
         //no warning will be issued, as this call may be part of an inner iteration
@@ -703,7 +734,7 @@ typedef struct {
     double beta;        //twist angle (rad)
     double r;           //radial distance (m)
     double dr;          //element width (m)
-    Airfoil airfoil;    //local airfoil data
+    Airfoil* airfoil;   //local airfoil data
 } Element;
 
 //data structure for the residual output
@@ -718,12 +749,39 @@ typedef struct {
     double vt;
     double Cn;
     double Ct;
-} Residual;
+} ResidualOutput;
+
+//data structure for the residual inputs
+//INTERNAL USE ONLY
+typedef struct {
+    double Ua;
+    double Ut;
+    double R;
+    int B;
+    Element* currentelement;
+    double rho;
+    double mu;
+    double a;
+} ResidualArgs;
 
 //define the QProp residual function
 //NOTE: the implementation is an exact replica of the steps described in the QProp theory document
 //INTERNAL USE ONLY
-void residual(Residual* output, double psi, double Ua, double Ut, double R, double B, Element* currentelement, double rho, double mu, double a) {
+void residual(ResidualOutput* output, double psi, ResidualArgs* args) {
+    //extract args
+    double Ua = args->Ua;
+    double Ut = args->Ut;
+    double R = args->R;
+    int B = args->B;
+    Element* currentelement = args->currentelement;
+    /*printf("  size = %i\n", currentelement->airfoil->size);
+    for (int i=0; i<currentelement->airfoil->size; ++i) {
+        printf("Re[%i] = %f\n", i, currentelement->airfoil->polars[i]->Re);
+    }*/
+    double rho = args->rho;
+    double mu = args->mu;
+    double a = args->a;
+
     //calculate velocity components
     double U = sqrt(Ua*Ua + Ut*Ut);
     double Wa = 0.5*Ua + 0.5*U*sin(psi);
@@ -739,38 +797,51 @@ void residual(Residual* output, double psi, double Ua, double Ut, double R, doub
 
     //interpolate airfoil aerodynamic coefficients
     double Mach = (a > 0)? sqrt(output->W/a) : 0.0;
-    PolarPoint* operatingpoint = interpolate_airfoil_polars(&(currentelement->airfoil), alpha, Re, Mach);
+    PolarPoint* operatingpoint = interpolate_airfoil_polars(currentelement->airfoil, alpha, Re, Mach);
 
     //calculate tip losses
     output->lambdaw = ((currentelement->r)/R)*(Wa/Wt);
     double f = (1.0 - (currentelement->r)/R) * 0.5 * B / output->lambdaw;
-    double F = acos(exp(-f)) * 2.0 / M_PI;
+    //double F = acos(exp(-f)) * 2.0 / PI;
+    double F = 0.0;
+    if (f>0) {
+        F = acos(exp(-f)) * 2.0 / PI;
+    }
 
     //determine circulation and rotor coefficients
-    output->Gamma = output->vt * (4.0*M_PI*(currentelement->r) / B) * F * sqrt(1.0 + pow(4*output->lambdaw*R/(M_PI*B*(currentelement->r)), 2));
+    output->Gamma = output->vt * (4.0*PI*(currentelement->r) / B) * F * sqrt(1.0 + pow(4*output->lambdaw*R/(PI*B*(currentelement->r)), 2));
     output->residual = output->Gamma - 0.5 * output->W * (currentelement->c) * operatingpoint->CL;
     output->Cn = operatingpoint->CL* Wt / output->W - operatingpoint->CD * Wa / output->W;
     output->Ct = operatingpoint->CL* Wa / output->W + operatingpoint->CD * Wt / output->W;
     free(operatingpoint);
 }
 
+//wrap the residual function so it can be passed to fzero
+//INTERNAL USE ONLY
+double residual_wrapper(double psi, void* args) {
+    ResidualOutput output;      //= {0.0, 0.0, 0.0, 0, NULL, 0.0, 0.0, 0.0}
+    residual(&output, psi, args);
+    return output.residual;
+}
+
 //find the root of a function f(x)=0 using the bisection method
 //INTERNAL USE ONLY
-double fzero(double (*f)(double), double a, double b, double tol, int itmax) {
-    double fa = f(a);
-    double fb = f(b);
+double fzero(double (*f)(double x, void* args), double a, double b, double tol, int itmax, void* args) {
+    double fa = f(a, args);
+    double fb = f(b, args);
     if (fa*fb > 0) {
         printf("ERROR when using fzero: f(a) and f(b) must have opposite signs\n");
-        return 0;
+        return a;
     }
 
     //iterate
-    double c = 0;
-    double fc = 0;
+    double c = 0.0;
+    double fc = 0.0;
     for (int i=0; i<itmax; ++i) {
         //evaluate mid point
         c = 0.5*(a+b);
-        fc = f(c);
+        fc = f(c, args);
+        //printf("c=%f - fc=%f\n", c, fc);
         //if (fabs(fc) <= tol) {                    //stopping criterion on residual only
         if (fabs(fc) <= tol && 0.5*(b-a) <= tol) {  //stopping criterion on residual and convergence
             return c;
@@ -788,7 +859,7 @@ double fzero(double (*f)(double), double a, double b, double tol, int itmax) {
     }
 
     printf("ERROR while using fzero: maximum number of iterations reached\n");
-    return 0;
+    return c;
 }
 
 //run qprop iterations
@@ -814,57 +885,42 @@ RotorPerformance* qprop(Rotor* rotor, double Uinf, double Omega, double tol, int
     perf->dTdr = calloc(nelems, sizeof(double));
     perf->dQdr = calloc(nelems, sizeof(double));
     perf->nelems = nelems;
-    Residual res;       //all calculations are sequential, so all the residuals can be stored in the same variable
 
     //iterate over each element in the blade
     for (int i=0; i<nelems; ++i) {
-        //define the i-th element between the i-th and the (i+1)-th sections
+        //build the i-th element, between the i-th and the (i+1)-th sections
         Element currentelement;     //= {0, 0, 0, 0, (*airfoil)};
         currentelement.c = 0.5*(rotor->sections[i].c + rotor->sections[i+1].c);
         currentelement.beta = 0.5*(rotor->sections[i].beta + rotor->sections[i+1].beta);
         currentelement.r = 0.5*(rotor->sections[i].r + rotor->sections[i+1].r);
         currentelement.dr = rotor->sections[i+1].r - rotor->sections[i].r;
-        currentelement.airfoil = rotor->sections[i+1].airfoil;
+        currentelement.airfoil = &(rotor->sections[i+1].airfoil);
         //
         //TODO: interpolate airfoils between the two sections
         //
-        
-        //use bisection method to find where psi is zeroing the residual function
-        double psi1 = -M_PI/2;
-        residual(&res, psi1, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
-        double f1 = res.residual;
 
-        double psi2 = +M_PI/2;
-        residual(&res, psi2, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
-        double f2 = res.residual;
-
-        if (f1*f2 > 0) {
-            printf("ERROR on element %i: res(a) and res(b) have the same sign\n", i);
-            return perf;
-        }
-        double c = 0;
-        double fc = 1.0;
-        for (int j=0; j<itmax; ++j) {
-            c = 0.5*(psi1+psi2);
-            residual(&res, c, Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a);
-            fc = res.residual;
-            
-            if (fabs(fc) <= tol && 0.5*(psi2-psi1) <= tol) {
-                //printf("Element #%i - Converged after %i iterations (residual = %e)\n", i, j, fc);
+        //check airfoil polars
+        for (int j=1; j<currentelement.airfoil->size; ++j) {
+            if (currentelement.airfoil->polars[j]->Re <= currentelement.airfoil->polars[j-1]->Re) {
+                //j-th polar has a lower Reynolds number than the preceding polar
+                sort_airfoil_polars(currentelement.airfoil);
                 break;
             }
-            if (f1*fc < 0) {
-                psi2 = c;
-                f2 = fc;
-            }
-            else {
-                psi1 = c;
-                f1 = fc;
-            }
         }
+        
+        //find the value of psi that makes the residual function equal to zero
+        ResidualArgs args = {Uinf, Omega*currentelement.r, rotor->D/2, rotor->B, &currentelement, rho, mu, a};
+        double psi = fzero(residual_wrapper, -PI/2, +PI/2, tol, itmax, &args);
 
         //calculate element thrust and torque
-        perf->residuals[i] = fc;
+        ResidualOutput res;     //= {0.0, 0.0, 0.0, 0, NULL, 0.0, 0.0, 0.0}
+        residual(&res, psi, &args);
+        if (fabs(res.residual) > tol) {
+            printf("ERROR when using qprop at blade location #%i: unable to find psi value that is zeroing the residual function (residual=%e exceeds tolerance=%e)\n", i, perf->residuals[i], tol);
+            free_rotor_performance(perf);
+            return NULL;
+        }
+        perf->residuals[i] = res.residual;
         perf->Gamma[i] = res.Gamma;
         perf->lambdaw[i] = res.lambdaw;
         perf->r[i] = currentelement.r;
@@ -877,10 +933,10 @@ RotorPerformance* qprop(Rotor* rotor, double Uinf, double Omega, double tol, int
     }
     perf->T *= rotor->B;                //total thrust (N)
     perf->Q *= rotor->B;                //total torque (N-m)
-    double n = Omega/(2*M_PI);          //revolutions per second (rev/s)
+    double n = Omega/(2*PI);          //revolutions per second (rev/s)
     perf->CT = perf->T / (rho * pow(n,2) * pow(rotor->D,4));        //thrust coefficient
     double CQ = perf->Q / (rho * pow(n,2) * pow(rotor->D,5));       //torque coefficient
-    perf->CP = 2*M_PI * CQ;             //power coefficient
+    perf->CP = 2*PI * CQ;             //power coefficient
     perf->J = Uinf / (n * rotor->D);    //advance ratio
     return perf;
 }
@@ -906,3 +962,4 @@ void free_rotor_performance(RotorPerformance* perf) {
     free(perf);
     perf = NULL;
 }
+

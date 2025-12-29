@@ -46,14 +46,14 @@ int main() {
 
     //test #3: read airfoil using the two previous polars
     const char* filenames3[] = {
-        "02_airfoil_polar_FX63-120_Re0.300_M0.00_N9.0.txt",
-        "02_airfoil_polar_NACA-4412_Re0.030_M0.00_N6.0_EDITED.txt"
+        "02_airfoil_polar_NACA-4412_Re0.030_M0.00_N6.0_EDITED.txt",
+        "02_airfoil_polar_FX63-120_Re0.300_M0.00_N9.0.txt"
     };
     Airfoil* airfoil3 = import_xfoil_polars(filenames3, 2);
     if (airfoil3->size == 2
-                && airfoil3->polars[0]->alpha[4] == polar1->alpha[4]
-                && airfoil3->polars[1]->CL[airfoil3->polars[1]->size-1] == polar2->CL[polar2->size-1]
-                && airfoil3->polars[1]->CD[0] == polar2->CD[0]) {
+                && airfoil3->polars[0]->CL[airfoil3->polars[0]->size-1] == polar2->CL[polar2->size-1]
+                && airfoil3->polars[0]->CD[0] == polar2->CD[0]
+                && airfoil3->polars[1]->alpha[4] == polar1->alpha[4]) {
         printf("TEST 2.3 - PASSED :)\n");
     }
     else {
@@ -93,9 +93,37 @@ int main() {
         return 0;
     }
 
+    //test #5: sort airfoil polars
+    const char* filenames5[] = {
+        "./airfoil_polar_naca4412_Ncrit=6/NACA 4412_T1_Re0.200_M0.00_N6.0.txt",
+        "./airfoil_polar_naca4412_Ncrit=6/NACA 4412_T1_Re0.030_M0.00_N6.0.txt",
+        "./airfoil_polar_naca4412_Ncrit=6/NACA 4412_T1_Re0.500_M0.00_N6.0.txt",
+        "./airfoil_polar_naca4412_Ncrit=6/NACA 4412_T1_Re0.100_M0.00_N6.0.txt"
+    };
+    Airfoil* airfoil5 = import_xfoil_polars(filenames5, 4);
+    if (airfoil5->size == 4
+                && airfoil5->polars[0]->Re == 30000
+                && airfoil5->polars[1]->Re == 100000
+                && airfoil5->polars[2]->Re == 200000
+                && airfoil5->polars[3]->Re == 500000
+                && fabs(airfoil5->polars[0]->CL[airfoil5->polars[0]->size-1] - 1.0065) <= 1e-6
+                && fabs(airfoil5->polars[3]->CL[airfoil5->polars[3]->size-1] - 1.5299) <= 1e-6) {
+        printf("TEST 2.5 - PASSED :)\n");
+    }
+    else {
+        printf("TEST 2.5 - FAILED :(\n");
+        free_polar(polar1);
+        free_polar(polar2);
+        free_airfoil(airfoil3);
+        free_airfoil(airfoil4);
+        free_airfoil(airfoil5);
+        return 0;
+    }
+
     free_polar(polar1);
     free_polar(polar2);
     free_airfoil(airfoil3);
     free_airfoil(airfoil4);
+    free_airfoil(airfoil5);
     return 0;
 }

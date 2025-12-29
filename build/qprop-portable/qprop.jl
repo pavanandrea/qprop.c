@@ -77,28 +77,14 @@ struct CSection
     r::Cdouble
     airfoil::CAirfoil
 end
-struct Section
-    c::Float64
-    beta::Float64
-    r::Float64
-    airfoil::Airfoil
-end
 
-#data structure for rotors
 struct CRotor
     D::Cdouble
     B::Cint
     nsections::Cint
     sections_ptr::Ptr{CSection}
 end
-struct Rotor
-    D::Float64
-    B::Int
-    nsections::Int
-    sections::Vector{Section}
-end
 
-#data structure for qprop output
 struct CRotorPerformance
     T::Cdouble
     Q::Cdouble
@@ -115,6 +101,26 @@ struct CRotorPerformance
     dQdr_ptr::Ptr{Cdouble}
     nelems::Cint
 end
+
+
+#---------------------------------
+#   PUBLIC-FACING DATA CLASSES
+#---------------------------------
+
+struct Section
+    c::Float64
+    beta::Float64
+    r::Float64
+    airfoil::Airfoil
+end
+
+struct Rotor
+    D::Float64
+    B::Int
+    nsections::Int
+    sections::Vector{Section}
+end
+
 struct RotorPerformance
     T::Float64
     Q::Float64

@@ -18,35 +18,45 @@ else
     RUN_CMD=""
 fi
 
-#compile and run tests in C
-gcc 01_test_fzero.c -o 01_test_fzero -lm -Wall -Wextra
-$RUN_CMD ./01_test_fzero
+#compile all C files in the current directory
+C_FILES=*.c
+for cfile in $C_FILES; do
+    #compile
+    filename="${cfile%.c}"
+    echo ""
+    echo "--- TEST ${filename} ---"
+    echo ""
+    gcc "$cfile" -o "${filename}" -lm -Wall -Wextra
+    if [ $? -ne 0 ]; then
+        echo "Compilation of ${cfile} failed."
+        exit 1
+    fi
 
-gcc 02_test_import_xfoil_polars.c -o 02_test_import_xfoil_polars -lm -Wall -Wextra
-$RUN_CMD ./02_test_import_xfoil_polars
-
-gcc 03_test_interpolate_airfoil_polars.c -o 03_test_interpolate_airfoil_polars -lm -Wall -Wextra
-$RUN_CMD ./03_test_interpolate_airfoil_polars
-
-gcc 04_test_residual.c -o 04_test_residual -lm -Wall -Wextra
-$RUN_CMD ./04_test_residual
-
-gcc 05_test_qprop.c -o 05_test_qprop -lm -Wall -Wextra
-$RUN_CMD ./05_test_qprop
-
-gcc 06_test_rotor_refinement.c -o 06_test_rotor_refinement -lm -Wall -Wextra
-$RUN_CMD ./06_test_rotor_refinement
+    #run test and remove executable
+    ${RUN_CMD} ./${filename}
+    if [ $? -ne 0 ]; then
+        echo "Test ${filename} failed."
+        exit 1
+    fi
+    rm -f "${filename}"
+done
 
 #run binding test in python
 if command -v python3 &> /dev/null; then
+    echo ""
+    echo "--- TEST PYTHON BINDING ---"
+    echo ""
     python3 test_python_binding.py
 else
-    echo "Python not found, skipping test_python_binding.py"
+    echo "Python not installed, skipping test_python_binding.py"
 fi
 
 #run binding test in julia
 if command -v julia &> /dev/null; then
+    echo ""
+    echo "--- TEST JULIA BINDING ---"
+    echo ""
     julia test_julia_binding.jl
 else
-    echo "Julia not found, skipping test_julia_binding.jl"
+    echo "Julia not installed, skipping test_julia_binding.jl"
 fi

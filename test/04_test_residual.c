@@ -57,12 +57,9 @@ int main() {
         0.22008950933498891,    //pitch angle β (rad)
         0.12657709,             //radial position r (m)
         0.00084582,             //width dr (m)
-        *naca4412               //airfoil polars
+        naca4412                //airfoil polars
     };
-    Residual residual2 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    residual(
-        &residual2,
-        deg2rad(+45.0),             //psi angle (rad)
+    ResidualArgs args2 = {
         Uinf,
         Omega * tipelement.r,       //Ut=Omega*r (m/s)
         0.5 * apc10x7sf->D,
@@ -71,7 +68,9 @@ int main() {
         1.225,
         1.81e-5,
         0.0
-    );
+    };
+    ResidualOutput residual2;
+    residual(&residual2, deg2rad(+45.0), &args2);
     //printf("%f\n", residual2.residual);
     //printf("%f\n", residual2.W);
     //printf("%f\n", residual2.phi);

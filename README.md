@@ -5,7 +5,7 @@
     <img src="docs/logo.svg"></img>
 </p>
 
-[🌐 Run on your browser](https://pavanandrea.github.io/qprop.c/webgui/index.html) &nbsp; &bullet; &nbsp;
+[🌐 Run in your browser](https://pavanandrea.github.io/qprop.c/webgui/index.html) &nbsp; &bullet; &nbsp;
 [⇩ Download](https://github.com/pavanandrea/qprop.c/releases/latest) &nbsp; &bullet; &nbsp;
 [✅ Validation](https://github.com/pavanandrea/qprop.c/tree/main/validation)
 
@@ -61,11 +61,29 @@ with no dependencies, making it easy to include in other projects.
 🚀 Getting Started
 ------------------
 
-To use *qprop.c*, download the [latest release](https://github.com/pavanandrea/qprop.c/releases/latest)
-and run the included examples. No installation needed.
-You can also explore the `validation` folder in this repo for further examples.
+Download the latest release from the GitHub [releases page](https://github.com/pavanandrea/qprop.c/releases/latest).
+The package is self‑contained - no extra installation steps are required.
+After unpacking, you will find a set of example scripts to help you get started.
 
-For a quick start, consider the following Python snippet:
+```
+📚 qprop-portable-latest.zip/
+├── 📄 LICENSE
+├── 📂 qprop-portable/
+│   ├── 📄 LICENSE
+│   ├── 📄 qprop.h
+│   ├── 📄 qprop.jl
+│   ├── 📄 qprop.py
+│   ├── ⚙️ qprop-lib-linux-x64.so
+│   ├── ⚙️ qprop-lib-macos-arm64.dylib
+│   ├── ⚙️ qprop-lib-windows-x64.dll
+├── 📄 example_julia.jl
+├── 📄 example_matlab.m
+├── 📄 example_python.py
+└── 📄 README.txt
+```
+
+For a quick start, consider the following Python snippet showing how to read airfoil data,
+load a propeller model and compute thrust and torque:
 ```python
 import math
 import os
@@ -74,11 +92,11 @@ sys.path.insert("path/to/qprop-portable/")
 import qprop
 
 #read airfoil polars from a folder named "airfoil_polar_naca4412_Ncrit=6"
-polar_filenames = [
+polar_filenames = sorted([
     os.path.join("path", "to", "airfoil_polar_naca4412_Ncrit=6", f) \
     for f in os.listdir("airfoil_polar_naca4412_Ncrit=6") \
     if f.endswith(".txt")
-]
+])
 naca4412 = qprop.import_xfoil_polars(polar_filenames)
 
 #import propeller geometry from file
@@ -94,6 +112,8 @@ results = qprop.qprop(apc42x4, Uinf, Ω)
 print("Thrust: ", round(results.T, 5), " N")
 print("Torque: ", round(results.Q, 5), " N-m")
 ```
+
+You can also explore the `validation` folder in this repo for further examples.
 
 
 🛠️ Build from Source

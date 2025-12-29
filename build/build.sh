@@ -1,4 +1,6 @@
 #!/bin/bash
+#   Build the qprop library for Windows, Linux and macOS (ARM64)
+#   Requires Zig (https://ziglang.org/) to be in $PATH.
 
 zig cc ../src/qprop.c -o ./qprop-portable/qprop-lib-windows-x64.dll -shared -target x86_64-windows-gnu -lm -fPIC -O2 -Wall -Wextra
 zig cc ../src/qprop.c -o ./qprop-portable/qprop-lib-linux-x64.so -shared -target x86_64-linux-gnu -lm -fPIC -O2 -Wall -Wextra

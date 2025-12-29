@@ -26,7 +26,6 @@
 //  DATA STRUCTURES
 //---------------------
 
-
 //data structure for polars
 typedef struct {
     double Re;          //Reynolds number
@@ -47,7 +46,7 @@ typedef struct {
     double c;           //chord length (m)
     double beta;        //twist angle (rad)
     double r;           //radial distance (m)
-    Airfoil airfoil;    //local airfoil data
+    Airfoil airfoil;   //local airfoil data
 } Section;
 
 //data structure for rotors
@@ -77,11 +76,42 @@ typedef struct {
 } RotorPerformance;
 
 
+//-----------------
+//  FREE MEMORY
+//-----------------
+
+//FREE_POLAR frees the memory allocated in a Polar structure
+//Input:
+//  - currentpolar (Polar*): pointer to a polar that is no longer needed
+//Output:
+//  - none
+void free_polar(Polar* currentpolar);
+
+//FREE_AIRFOIL frees the memory allocated in an Airfoil structure
+//Input:
+//  - currentairfoil (Airfoil*): pointer to an airfoil that is no longer needed
+//Output:
+//  - none
+void free_airfoil(Airfoil* currentairfoil);
+
+//FREE_ROTOR frees the memory allocated in a Rotor structure
+//Input:
+//  - currentrotor (Rotor*): pointer to a rotor that is no longer needed
+//Output:
+//  - none
+void free_rotor(Rotor* currentrotor);
+
+//FREE_ROTOR_PERFORMANCE frees the memory allocated in a qprop output
+//Input:
+//  - perf (RotorPerformance*): pointer to a qprop output that is no longer needed
+//Output:
+//  - none
+void free_rotor_performance(RotorPerformance* perf);
+
 
 //---------------------------
 //  FUNCTION DECLARATIONS
 //---------------------------
-
 
 //DEG2RAD converts degrees to radians
 //Input:
@@ -107,20 +137,6 @@ double deg2rad(double deg);
 //    It is the caller's responsibility to free this memory by calling
 //    unload_polar_from_memory(Polar*) when it is no longer needed
 Polar* read_xfoil_polar_from_file(const char *filename);
-
-//FREE_POLAR frees the memory allocated in a Polar structure
-//Input:
-//  - currentpolar (Polar*): pointer to a polar that is no longer needed
-//Output:
-//  - none
-void free_polar(Polar* currentpolar);
-
-//FREE_AIRFOIL frees the memory allocated in an Airfoil structure
-//Input:
-//  - currentairfoil (Airfoil*): pointer to an airfoil that is no longer needed
-//Output:
-//  - none
-void free_airfoil(Airfoil* currentairfoil);
 
 //IMPORT_XFOIL_POLARS imports airfoil polars from multiple text files
 //Input:
@@ -189,13 +205,6 @@ Rotor* import_rotor_geometry_uiuc(const char *filename, Airfoil* airfoil, double
 //  - newrotor (Rotor*): pointer to the new rotor geometry
 Rotor* refine_rotor_sections(Rotor* oldrotor, int nsections);
 
-//FREE_ROTOR frees the memory allocated in a Rotor structure
-//Input:
-//  - currentrotor (Rotor*): pointer to a rotor that is no longer needed
-//Output:
-//  - none
-void free_rotor(Rotor* currentrotor);
-
 //QPROP runs the QProp algorithm as described by Drela for each blade element
 //Input:
 //  - rotor (Rotor*): pointer to a rotor
@@ -213,9 +222,3 @@ void free_rotor(Rotor* currentrotor);
 //    tangential velocity (Ut = 0)
 RotorPerformance* qprop(Rotor* rotor, double Uinf, double Omega, double tol, int itmax, double rho, double mu, double a);
 
-//FREE_ROTOR_PERFORMANCE frees the memory allocated in a qprop output
-//Input:
-//  - perf (RotorPerformance*): pointer to a qprop output that is no longer needed
-//Output:
-//  - none
-void free_rotor_performance(RotorPerformance* perf);

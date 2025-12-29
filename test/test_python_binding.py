@@ -35,14 +35,13 @@ def main():
         return
 
     #test 3 - import airfoil from files
-    filenames3 = [
+    filenames3 = sorted([
         os.path.join("airfoil_polar_naca4412_Ncrit=6", f) \
         for f in os.listdir("airfoil_polar_naca4412_Ncrit=6") \
         if f.endswith(".txt")
-    ]
+    ])
     naca4412 = qprop.import_xfoil_polars(filenames3)
-
-    if naca4412.size == 10 and naca4412.polars[0].contents.alpha[0] == qprop.deg2rad(-15.0):
+    if naca4412.size == 10 and naca4412.polars[9].contents.Re == 500000.0 and naca4412.polars[9].contents.alpha[0] == qprop.deg2rad(-15.0):
         print("TEST P3 - PASSED :)")
     else:
         print("TEST P3 - FAILED :(")
